@@ -316,8 +316,8 @@ function MyDiary() {
 
   const handleCreateMemory = async (parsed) => {
     try {
-      console.log('DEBUG handleCreateMemory - parsed object:', parsed);
-      
+      console.log("DEBUG handleCreateMemory - parsed object:", parsed);
+
       const memoryData = {
         type: "text",
         content: parsed.content,
@@ -326,8 +326,8 @@ function MyDiary() {
         created_at: new Date().toISOString(),
       };
 
-      console.log('DEBUG handleCreateMemory - memoryData to send:', memoryData);
-      
+      console.log("DEBUG handleCreateMemory - memoryData to send:", memoryData);
+
       const result = await api.createMemory(memoryData);
       if (result && (result.success || result.data)) {
         let msg = `Memory created successfully.`;

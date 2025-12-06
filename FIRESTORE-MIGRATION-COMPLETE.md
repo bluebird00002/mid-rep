@@ -1,31 +1,38 @@
 # Firestore Migration Complete ✅
 
 ## Summary
+
 All backend routes have been successfully migrated from MySQL to Firestore (Firebase Cloud Firestore).
 
 ## What Changed
 
 ### Routes Migrated
+
 1. **Auth Routes** (`backend-node/routes/auth.js`)
+
    - Register, Login, Verify Token
    - Password Reset, Verify Username
    - All operations now use Firestore `users`, `security_answers`, and `login_track` collections
 
 2. **Memories Routes** (`backend-node/routes/memories.js`)
+
    - GET all memories, GET single memory
    - POST create memory, PUT update memory
    - DELETE memory, bulk delete
    - Uses Firestore `memories` collection with user isolation
 
 3. **Categories Routes** (`backend-node/routes/categories.js`)
+
    - GET all categories for user
    - Uses Firestore `categories` collection (document ID: `{userId}_{categoryName}`)
 
 4. **Tags Routes** (`backend-node/routes/tags.js`)
+
    - GET all tags for user
    - Uses Firestore `tags` collection (document ID: `{userId}_{tagName}`)
 
 5. **Stats Routes** (`backend-node/routes/stats.js`)
+
    - GET total memories, total images, categories, tags
    - All counts fetched from Firestore collections
 
@@ -49,23 +56,27 @@ ALLOWED_ORIGINS=https://your-vercel-domain.vercel.app
 ## How It Works Locally
 
 1. **Install deps** (if needed):
+
 ```bash
 cd backend-node
 npm install
 ```
 
 2. **Set up .env** in `backend-node/`:
+
 ```
 FIREBASE_SERVICE_ACCOUNT=your_firebase_service_account_json_or_base64
 JWT_SECRET=dev-secret-key-for-testing
 ```
 
 3. **Start backend**:
+
 ```bash
 node server.js
 ```
 
 4. **Test auth** (register/login should work without MySQL):
+
 ```bash
 # Register
 curl -X POST http://localhost:5000/api/auth/register \
@@ -79,6 +90,7 @@ curl -X POST http://localhost:5000/api/auth/login \
 ```
 
 5. **Test memories** (with token from login):
+
 ```bash
 # Create memory
 curl -X POST http://localhost:5000/api/memories \
@@ -100,12 +112,14 @@ curl http://localhost:5000/api/memories \
 ## Deployment Steps (on Render)
 
 1. Ensure these env vars are set in Render dashboard:
+
    - `FIREBASE_SERVICE_ACCOUNT`
    - `JWT_SECRET`
    - `CLOUDINARY_*` (for image uploads)
    - `ALLOWED_ORIGINS` (for CORS)
 
 2. **If you have existing MySQL data**, you can:
+
    - Leave it as-is (new data goes to Firestore)
    - Or manually migrate to Firestore later using a migration script
 
@@ -114,6 +128,7 @@ curl http://localhost:5000/api/memories \
 ## Testing After Deployment
 
 1. Frontend should now successfully:
+
    - Register new accounts ✅
    - Login ✅
    - Create memories ✅

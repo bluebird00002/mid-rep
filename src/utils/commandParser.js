@@ -133,15 +133,15 @@ export class CommandParser {
       tags: [],
     };
 
-    console.log('DEBUG parseCreateMemory - input command:', command);
+    console.log("DEBUG parseCreateMemory - input command:", command);
 
     // Step 1: Extract content from quotes (highest priority)
     const contentMatch = command.match(/["']([^"']+)["']/);
     if (contentMatch) {
       result.content = contentMatch[1];
-      console.log('✅ DEBUG - content from quotes:', result.content);
+      console.log("✅ DEBUG - content from quotes:", result.content);
     } else {
-      // Step 2: Fallback - content after "create memory :" 
+      // Step 2: Fallback - content after "create memory :"
       const colonMatch = command.match(/create memory\s*:\s*(.+)/i);
       if (colonMatch) {
         let content = colonMatch[1].trim();
@@ -149,7 +149,10 @@ export class CommandParser {
         content = content.replace(/\s*(?:with\s+)?tags:\s*[^"]+/i, "").trim();
         content = content.replace(/\s*(?:in\s+)?category:\s*\w+/i, "").trim();
         result.content = content;
-        console.log('✅ DEBUG - content from colonMatch fallback:', result.content);
+        console.log(
+          "✅ DEBUG - content from colonMatch fallback:",
+          result.content
+        );
       }
     }
 
@@ -157,21 +160,23 @@ export class CommandParser {
     const categoryMatch = command.match(/(?:in\s+)?category:\s*(\w+)/i);
     if (categoryMatch) {
       result.category = categoryMatch[1];
-      console.log('✅ DEBUG - category found:', result.category);
+      console.log("✅ DEBUG - category found:", result.category);
     }
 
     // Step 3: Extract tags
     // Pattern 1: "tags: tag1, tag2, tag3" - words separated by commas
-    let tagsMatch = command.match(/(?:with\s+)?tags:\s*([^"category]+?)(?=\s*(?:in\s+)?category:|["']|$)/i);
-    
+    let tagsMatch = command.match(
+      /(?:with\s+)?tags:\s*([^"category]+?)(?=\s*(?:in\s+)?category:|["']|$)/i
+    );
+
     if (tagsMatch && tagsMatch[1]) {
       const tagsStr = tagsMatch[1].trim();
-      console.log('✅ DEBUG - tags raw match:', tagsStr);
+      console.log("✅ DEBUG - tags raw match:", tagsStr);
       result.tags = tagsStr
         .split(",")
         .map((t) => t.trim())
         .filter((t) => t && t.length > 0);
-      console.log('✅ DEBUG - tags extracted (pattern 1):', result.tags);
+      console.log("✅ DEBUG - tags extracted (pattern 1):", result.tags);
     }
 
     // Pattern 2: hashtag syntax #tag1 #tag2
@@ -179,21 +184,21 @@ export class CommandParser {
       const hashTags = command.match(/#(\w+)/g);
       if (hashTags) {
         result.tags = hashTags.map((t) => t.replace("#", ""));
-        console.log('✅ DEBUG - hashtags extracted (pattern 2):', result.tags);
+        console.log("✅ DEBUG - hashtags extracted (pattern 2):", result.tags);
       }
     }
 
     // If still no tags, log it
     if (result.tags.length === 0) {
-      console.log('ℹ️ DEBUG - no tags found');
+      console.log("ℹ️ DEBUG - no tags found");
     }
 
-    console.log('✅ DEBUG parseCreateMemory - final result:', { 
+    console.log("✅ DEBUG parseCreateMemory - final result:", {
       type: result.type,
       content: result.content?.substring(0, 50),
       category: result.category,
       tagsCount: result.tags.length,
-      tags: result.tags 
+      tags: result.tags,
     });
     return result;
   }
