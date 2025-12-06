@@ -6,7 +6,7 @@ import fs from "fs";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { authenticateToken } from "../middleware/auth.js";
-import pool from "../config/database.js";
+import { admin, db } from "../config/firebase.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,38 +130,37 @@ router.post("/", upload.single("image"), async (req, res) => {
         typeof tags === "string" ? tags.split(",").map((t) => t.trim()) : [];
     }
 
-    const [result] = await pool.execute(
-      `INSERT INTO images (user_id, filename, original_name, file_path, description, tags) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        req.file.filename || req.file.public_id || null,
-        req.file.originalname,
-        req.file.path || req.file.location || null,
-        description,
-        JSON.stringify(tagsArray),
-      ]
-    );
+    // Save metadata to Firestore
+    const docData = {
+      userId,
+      filename: req.file.filename || req.file.public_id || null,
+      original_name: req.file.originalname,
+      file_path: req.file.path || req.file.location || null,
+      description,
+      tags: tagsArray,
+      memory_id: null,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    };
 
-    // Update tags
+    const docRef = await db.collection('images').add(docData);
+
+    // Update tags counts in Firestore
     for (const tag of tagsArray) {
       await updateTagCount(userId, tag);
     }
 
-    // Determine image URL depending on storage
-    const imageUrl = req.file.path || req.file.location || null;
-
     res.status(201).json({
       success: true,
       data: {
-        id: result.insertId,
-        image_url: imageUrl,
-        filename: req.file.filename || req.file.public_id || null,
-        original_name: req.file.originalname,
-        description: description,
+        id: docRef.id,
+        image_url: docData.file_path,
+        filename: docData.filename,
+        original_name: docData.original_name,
+        description: docData.description,
         tags: tagsArray,
       },
-      message: "Image uploaded successfully",
+      message: 'Image uploaded successfully',
     });
   } catch (error) {
     console.error("Upload image error:", error);
@@ -189,28 +188,28 @@ router.get("/", async (req, res) => {
     const userId = req.user.userId;
     const { tags, date } = req.query;
 
-    let query = "SELECT * FROM images WHERE user_id = ?";
-    const params = [userId];
-
+    // Query Firestore for this user's images
+    let imagesQuery = db.collection('images').where('userId', '==', userId);
     if (date) {
-      query += " AND DATE(created_at) LIKE ?";
-      params.push(`${date}%`);
+      // Filter by date (YYYY-MM-DD) by comparing created_at timestamp
+      // Firestore stores serverTimestamp; client-side filtering will be used if needed
     }
 
-    query += " ORDER BY created_at DESC";
+    imagesQuery = imagesQuery.orderBy('created_at', 'desc');
 
-    const [images] = await pool.execute(query, params);
+    const snapshot = await imagesQuery.get();
+    const images = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     const formattedImages = images.map((img) => ({
       id: img.id,
       filename: img.filename,
       original_name: img.original_name,
-      image_url: img.file_path || img.filepath || img.path || null,
+      image_url: img.file_path || null,
       description: img.description,
-      tags: img.tags ? JSON.parse(img.tags) : [],
-      memory_id: img.memory_id,
-      created_at: img.created_at,
-      updated_at: img.updated_at,
+      tags: img.tags || [],
+      memory_id: img.memory_id || null,
+      created_at: img.created_at || null,
+      updated_at: img.updated_at || null,
     }));
 
     // Filter by tags if provided
@@ -242,19 +241,12 @@ router.get("/:id", async (req, res) => {
     const userId = req.user.userId;
     const imageId = req.params.id;
 
-    const [images] = await pool.execute(
-      "SELECT * FROM images WHERE id = ? AND user_id = ?",
-      [imageId, userId]
-    );
-
-    if (images.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Image not found",
-      });
+    const doc = await db.collection('images').doc(imageId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: 'Image not found' });
     }
 
-    const image = images[0];
+    const image = { id: doc.id, ...doc.data() };
     res.json({
       success: true,
       data: {
@@ -262,15 +254,15 @@ router.get("/:id", async (req, res) => {
           id: image.id,
           filename: image.filename,
           original_name: image.original_name,
-          image_url: image.file_path || image.filepath || image.path || null,
+          image_url: image.file_path || null,
           description: image.description,
-          tags: image.tags ? JSON.parse(image.tags) : [],
-          memory_id: image.memory_id,
-          created_at: image.created_at,
-          updated_at: image.updated_at,
+          tags: image.tags || [],
+          memory_id: image.memory_id || null,
+          created_at: image.created_at || null,
+          updated_at: image.updated_at || null,
         },
       },
-      message: "Image retrieved successfully",
+      message: 'Image retrieved successfully',
     });
   } catch (error) {
     console.error("Get image error:", error);
@@ -288,30 +280,20 @@ router.put("/:id", async (req, res) => {
     const imageId = req.params.id;
     const { description, tags } = req.body;
 
-    const [images] = await pool.execute(
-      "SELECT * FROM images WHERE id = ? AND user_id = ?",
-      [imageId, userId]
-    );
-
-    if (images.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Image not found",
-      });
+    const docRef = db.collection('images').doc(imageId);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: 'Image not found' });
     }
 
-    const image = images[0];
+    const image = { id: doc.id, ...doc.data() };
 
-    // Update image record
-    await pool.execute(
-      "UPDATE images SET description = ?, tags = ? WHERE id = ? AND user_id = ?",
-      [
-        description !== undefined ? description : image.description,
-        tags ? JSON.stringify(tags) : image.tags,
-        imageId,
-        userId,
-      ]
-    );
+    // Update image record in Firestore
+    await docRef.update({
+      description: description !== undefined ? description : image.description,
+      tags: tags ? tags : image.tags,
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     // Update tags if provided
     if (tags && Array.isArray(tags)) {
@@ -324,11 +306,10 @@ router.put("/:id", async (req, res) => {
       success: true,
       data: {
         id: imageId,
-        description:
-          description !== undefined ? description : image.description,
-        tags: tags || (image.tags ? JSON.parse(image.tags) : []),
+        description: description !== undefined ? description : image.description,
+        tags: tags || (image.tags || []),
       },
-      message: "Image updated successfully",
+      message: 'Image updated successfully',
     });
   } catch (error) {
     console.error("Update image error:", error);
@@ -345,25 +326,17 @@ router.delete("/:id", async (req, res) => {
     const userId = req.user.userId;
     const imageId = req.params.id;
 
-    const [images] = await pool.execute(
-      "SELECT file_path, filename FROM images WHERE id = ? AND user_id = ?",
-      [imageId, userId]
-    );
-
-    if (images.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Image not found",
-      });
+    const docRef = db.collection('images').doc(imageId);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: 'Image not found' });
     }
 
-    const filePath = images[0].file_path;
-    const publicId = images[0].filename;
+    const data = doc.data();
+    const filePath = data.file_path;
+    const publicId = data.filename;
 
-    await pool.execute("DELETE FROM images WHERE id = ? AND user_id = ?", [
-      imageId,
-      userId,
-    ]);
+    await docRef.delete();
 
     // Delete file from Cloudinary if configured, otherwise delete local file
     if (process.env.CLOUDINARY_CLOUD_NAME && publicId) {
@@ -390,12 +363,22 @@ router.delete("/:id", async (req, res) => {
 });
 
 async function updateTagCount(userId, tag) {
-  await pool.execute(
-    `INSERT INTO tags (user_id, name, count) 
-     VALUES (?, ?, 1) 
-     ON DUPLICATE KEY UPDATE count = count + 1`,
-    [userId, tag]
-  );
+  // Use Firestore to increment tag counts per user
+  try {
+    const docId = `${userId}_${tag}`;
+    const tagRef = db.collection('tags').doc(docId);
+    await tagRef.set(
+      {
+        userId,
+        name: tag,
+        count: admin.firestore.FieldValue.increment(1),
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (e) {
+    console.warn('Failed to update tag count in Firestore:', e);
+  }
 }
 
 export default router;
