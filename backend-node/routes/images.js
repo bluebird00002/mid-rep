@@ -188,17 +188,16 @@ router.get("/", async (req, res) => {
     const userId = req.user.userId;
     const { tags, date } = req.query;
 
-    // Query Firestore for this user's images
-    let imagesQuery = db.collection("images").where("userId", "==", userId);
-    if (date) {
-      // Filter by date (YYYY-MM-DD) by comparing created_at timestamp
-      // Firestore stores serverTimestamp; client-side filtering will be used if needed
-    }
+    // Query Firestore for this user's images (no orderBy to avoid index requirement)
+    const snapshot = await db.collection("images").where("userId", "==", userId).get();
+    let images = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    imagesQuery = imagesQuery.orderBy("created_at", "desc");
-
-    const snapshot = await imagesQuery.get();
-    const images = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Sort by created_at in memory (descending)
+    images.sort((a, b) => {
+      const aTime = a.created_at instanceof admin.firestore.Timestamp ? a.created_at.toMillis() : 0;
+      const bTime = b.created_at instanceof admin.firestore.Timestamp ? b.created_at.toMillis() : 0;
+      return bTime - aTime;
+    });
 
     const formattedImages = images.map((img) => ({
       id: img.id,
