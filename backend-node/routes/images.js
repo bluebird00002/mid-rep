@@ -3,6 +3,8 @@ import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { authenticateToken } from "../middleware/auth.js";
 import pool from "../config/database.js";
 
@@ -18,34 +20,94 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "img_" + uniqueSuffix + path.extname(file.originalname));
-  },
-});
+// If Cloudinary env vars are set, configure Cloudinary storage; otherwise fall back to disk storage
+let upload;
+if (
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
 
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(
-        new Error(
-          "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."
-        )
-      );
-    }
-  },
-});
+  const cloudinaryStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: process.env.CLOUDINARY_FOLDER || "mid-uploads",
+      format: async (req, file) => {
+        // Preserve original format
+        const ext = path.extname(file.originalname).replace(".", "");
+        return ext || "jpg";
+      },
+      public_id: (req, file) => {
+        const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        return `img_${unique}`;
+      },
+    },
+  });
+
+  upload = multer({
+    storage: cloudinaryStorage,
+    limits: {
+      fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(
+          new Error(
+            "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."
+          )
+        );
+      }
+    },
+  });
+} else {
+  // Disk storage fallback
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, "img_" + uniqueSuffix + path.extname(file.originalname));
+    },
+  });
+
+  upload = multer({
+    storage: storage,
+    limits: {
+      fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(
+          new Error(
+            "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."
+          )
+        );
+      }
+    },
+  });
+}
 
 // Upload image
 router.post("/", upload.single("image"), async (req, res) => {
@@ -73,9 +135,9 @@ router.post("/", upload.single("image"), async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         userId,
-        req.file.filename,
+        req.file.filename || req.file.public_id || null,
         req.file.originalname,
-        req.file.path,
+        req.file.path || req.file.location || null,
         description,
         JSON.stringify(tagsArray),
       ]
@@ -86,12 +148,15 @@ router.post("/", upload.single("image"), async (req, res) => {
       await updateTagCount(userId, tag);
     }
 
+    // Determine image URL depending on storage
+    const imageUrl = req.file.path || req.file.location || null;
+
     res.status(201).json({
       success: true,
       data: {
         id: result.insertId,
-        image_url: `http://localhost:3000/uploads/${req.file.filename}`,
-        filename: req.file.filename,
+        image_url: imageUrl,
+        filename: req.file.filename || req.file.public_id || null,
         original_name: req.file.originalname,
         description: description,
         tags: tagsArray,
@@ -101,7 +166,15 @@ router.post("/", upload.single("image"), async (req, res) => {
   } catch (error) {
     console.error("Upload image error:", error);
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      // If file is on disk, remove it. Cloudinary uploads are remote URLs, so skip.
+      const localPath = req.file.path;
+      try {
+        if (localPath && fs.existsSync(localPath)) {
+          fs.unlinkSync(localPath);
+        }
+      } catch (e) {
+        console.warn("Failed to remove local temp file:", e);
+      }
     }
     res.status(500).json({
       success: false,
@@ -132,7 +205,7 @@ router.get("/", async (req, res) => {
       id: img.id,
       filename: img.filename,
       original_name: img.original_name,
-      image_url: `http://localhost:3000/uploads/${img.filename}`,
+      image_url: img.file_path || img.filepath || img.path || null,
       description: img.description,
       tags: img.tags ? JSON.parse(img.tags) : [],
       memory_id: img.memory_id,
@@ -189,7 +262,7 @@ router.get("/:id", async (req, res) => {
           id: image.id,
           filename: image.filename,
           original_name: image.original_name,
-          image_url: `/api/uploads/${image.filename}`,
+          image_url: image.file_path || image.filepath || image.path || null,
           description: image.description,
           tags: image.tags ? JSON.parse(image.tags) : [],
           memory_id: image.memory_id,
@@ -273,7 +346,7 @@ router.delete("/:id", async (req, res) => {
     const imageId = req.params.id;
 
     const [images] = await pool.execute(
-      "SELECT file_path FROM images WHERE id = ? AND user_id = ?",
+      "SELECT file_path, filename FROM images WHERE id = ? AND user_id = ?",
       [imageId, userId]
     );
 
@@ -285,14 +358,21 @@ router.delete("/:id", async (req, res) => {
     }
 
     const filePath = images[0].file_path;
+    const publicId = images[0].filename;
 
     await pool.execute("DELETE FROM images WHERE id = ? AND user_id = ?", [
       imageId,
       userId,
     ]);
 
-    // Delete file
-    if (fs.existsSync(filePath)) {
+    // Delete file from Cloudinary if configured, otherwise delete local file
+    if (process.env.CLOUDINARY_CLOUD_NAME && publicId) {
+      try {
+        await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+      } catch (e) {
+        console.warn("Failed to delete image from Cloudinary:", e);
+      }
+    } else if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
