@@ -122,6 +122,8 @@ router.post('/', async (req, res) => {
       isArray: Array.isArray(tags)
     });
 
+        // Request debug logging
+        console.log('🔎 Get memories request by user:', userId, 'query:', { category, type, tags, date, limit });
     // Ensure tags is an array. Accept arrays, comma-separated strings, or single values.
     let tagsArray = [];
     if (Array.isArray(tags)) {
@@ -162,20 +164,43 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Create memory in Firestore
-    const docRef = await db.collection('memories').add({
-      user_id: userId,
-      type,
-      content: content || null,
+        console.log(`✅ Retrieved ${memories.length} memories for user ${userId}`);
+        res.json({
+          success: true,
+          data: { memories },
+          message: 'Memories retrieved successfully'
+        });
       category: category || null,
-      tags: tagsArray,
-      columns: columns || null,
-      rows: rows || null,
-      items: items || null,
-      events: events || null,
-      description: description || null,
+        console.error('Get memories error:', error && (error.stack || error));
+        // Return error message to client temporarily to aid debugging
+        res.status(500).json({
+          success: false,
+          error: 'Failed to retrieve memories',
+          details: error && (error.message || String(error))
+        });
       image_url: image_url || null,
       created_at: admin.firestore.FieldValue.serverTimestamp(),
+
+    // Debug endpoint for memories (protected). Returns Firestore connectivity and counts.
+    router.get('/_debug', async (req, res) => {
+      try {
+        const userId = req.user.userId;
+        // Check Firestore by counting documents (use small sample)
+        const snap = await db.collection('memories').where('user_id', '==', userId).limit(1).get();
+        const totalSnap = await db.collection('memories').where('user_id', '==', userId).get();
+        res.json({
+          success: true,
+          data: {
+            firestoreAvailable: true,
+            sampleCount: snap.size,
+            totalCount: totalSnap.size
+          }
+        });
+      } catch (err) {
+        console.error('Memories debug error:', err && (err.stack || err));
+        res.status(500).json({ success: false, error: 'Debug failed', details: err && (err.message || String(err)) });
+      }
+    });
       updated_at: admin.firestore.FieldValue.serverTimestamp()
     });
 
