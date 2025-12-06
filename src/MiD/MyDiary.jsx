@@ -2523,10 +2523,9 @@ function MyDiary() {
   const showHelp = () => {
     addSystemMessage("═══ CREATE MEMORIES ═══");
     addSystemMessage('  create memory: "Your text"');
-    addSystemMessage('  create memory tags: tag1, tag2 "Your text"');
-    addSystemMessage('  create memory category: happy "Your text"');
-    addSystemMessage('  create memory #work #ideas "Your text"');
-    addSystemMessage('  create memory tags: work category: happy "text"');
+    addSystemMessage('  create memory: #work #ideas "Your text"');
+    addSystemMessage('  create memory: category: happy "Your text"');
+    addSystemMessage('  create memory: #work category: happy "Your text"');
     addSystemMessage("");
     addSystemMessage("═══ CREATE TABLE (Interactive) ═══");
     addSystemMessage("  create table - Starts guided table creation");
