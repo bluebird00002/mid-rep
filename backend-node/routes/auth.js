@@ -1,7 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import pool from "../config/database.js";
+import { admin, db } from "../config/firebase.js";
 
 const router = express.Router();
 
@@ -49,13 +49,14 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Check if username exists
-    const [existing] = await pool.execute(
-      "SELECT id FROM users WHERE username = ?",
-      [username]
-    );
+    // Check if username exists in Firestore
+    const existingSnap = await db
+      .collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get();
 
-    if (existing.length > 0) {
+    if (!existingSnap.empty) {
       return res.status(400).json({
         success: false,
         error: "Username already exists",
@@ -77,27 +78,26 @@ router.post("/register", async (req, res) => {
       10
     );
 
-    // Create user
-    const [result] = await pool.execute(
-      "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-      [username, hashedPassword]
-    );
+    // Create user in Firestore
+    const userRef = await db.collection("users").add({
+      username,
+      password_hash: hashedPassword,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
-    const userId = result.insertId;
+    const userId = userRef.id;
 
-    // Store security answers
-    await pool.execute(
-      "INSERT INTO security_answers (user_id, question_1, answer_1_hash, question_2, answer_2_hash, question_3, answer_3_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [
-        userId,
-        "What is your favorite color?",
-        hashedAnswer1,
-        "What is the name of your first pet?",
-        hashedAnswer2,
-        "In what city were you born?",
-        hashedAnswer3,
-      ]
-    );
+    // Store security answers in a separate collection
+    await db.collection("security_answers").add({
+      user_id: userId,
+      question_1: "What is your favorite color?",
+      answer_1_hash: hashedAnswer1,
+      question_2: "What is the name of your first pet?",
+      answer_2_hash: hashedAnswer2,
+      question_3: "In what city were you born?",
+      answer_3_hash: hashedAnswer3,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     console.log(`✅ User created: ${username} with security answers`);
 
@@ -147,13 +147,14 @@ router.post("/login", async (req, res) => {
 
     console.log(`🔍 Looking for user: ${username}`);
 
-    // Find user
-    const [users] = await pool.execute(
-      "SELECT id, username, password_hash FROM users WHERE username = ?",
-      [username]
-    );
+    // Find user in Firestore
+    const usersSnap = await db
+      .collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get();
 
-    if (users.length === 0) {
+    if (usersSnap.empty) {
       console.log(`❌ User not found: ${username}`);
       return res.status(401).json({
         success: false,
@@ -161,7 +162,8 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const user = users[0];
+    const userDoc = usersSnap.docs[0];
+    const user = { id: userDoc.id, ...userDoc.data() };
     console.log(`✅ User found: ${username}`);
 
     // Verify password
@@ -197,14 +199,14 @@ router.post("/login", async (req, res) => {
         "unknown";
       const userAgent = req.headers["user-agent"] || "unknown";
 
-      // Check if login_track table exists and get count
+      // Check login count from Firestore login_track
       let loginCount = 0;
       try {
-        const [countResult] = await pool.execute(
-          "SELECT COUNT(*) as cnt FROM login_track WHERE user_id = ?",
-          [user.id]
-        );
-        loginCount = countResult[0]?.cnt || 0;
+        const countSnap = await db
+          .collection("login_track")
+          .where("user_id", "==", user.id)
+          .get();
+        loginCount = countSnap.size || 0;
         console.log(
           `DEBUG: User ${username} (ID: ${user.id}) has ${loginCount} previous logins`
         );
@@ -217,12 +219,14 @@ router.post("/login", async (req, res) => {
 
       const isFirstLogin = loginCount === 0;
 
-      // Insert login record
+      // Insert login record into Firestore
       try {
-        await pool.execute(
-          "INSERT INTO login_track (user_id, ip_address, user_agent) VALUES (?, ?, ?)",
-          [user.id, ipAddress, userAgent]
-        );
+        await db.collection("login_track").add({
+          user_id: user.id,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
         console.log(
           `✅ Login tracked for user: ${username} (ID: ${user.id}). IP: ${ipAddress}`
         );
@@ -293,13 +297,9 @@ router.get("/verify", async (req, res) => {
         });
       }
 
-      // Get fresh user data
-      const [users] = await pool.execute(
-        "SELECT id, username, created_at FROM users WHERE id = ?",
-        [decoded.userId]
-      );
-
-      if (users.length === 0) {
+      // Get fresh user data from Firestore
+      const userDoc = await db.collection("users").doc(decoded.userId).get();
+      if (!userDoc.exists) {
         return res.status(404).json({
           success: false,
           error: "User not found",
@@ -309,7 +309,7 @@ router.get("/verify", async (req, res) => {
       res.json({
         success: true,
         data: {
-          user: users[0],
+          user: { id: userDoc.id, ...userDoc.data() },
         },
       });
     });
@@ -348,29 +348,26 @@ router.get("/is-new-user", async (req, res) => {
       }
 
       try {
-        // Get user creation date
-        const [users] = await pool.execute(
-          "SELECT id, created_at FROM users WHERE id = ?",
-          [decoded.userId]
-        );
+        // Get user creation date from Firestore
+        const userDoc = await db.collection("users").doc(decoded.userId).get();
 
-        if (users.length === 0) {
+        if (!userDoc.exists) {
           return res.status(404).json({
             success: false,
             error: "User not found",
           });
         }
 
-        const user = users[0];
+        const user = { id: userDoc.id, ...userDoc.data() };
 
-        // Check login count from login_track table
+        // Check login count from login_track collection
         let loginCount = 0;
         try {
-          const [loginRecords] = await pool.execute(
-            "SELECT COUNT(*) as cnt FROM login_track WHERE user_id = ?",
-            [user.id]
-          );
-          loginCount = loginRecords[0]?.cnt || 0;
+          const loginRecords = await db
+            .collection("login_track")
+            .where("user_id", "==", user.id)
+            .get();
+          loginCount = loginRecords.size || 0;
         } catch (queryError) {
           console.warn(
             `DEBUG: Error querying login_track: ${queryError.message}`
@@ -423,13 +420,14 @@ router.post("/verify-username", async (req, res) => {
       });
     }
 
-    // Check if user exists
-    const [users] = await pool.execute(
-      "SELECT id FROM users WHERE username = ?",
-      [username]
-    );
+    // Check if user exists in Firestore
+    const usersSnap = await db
+      .collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get();
 
-    if (users.length === 0) {
+    if (usersSnap.empty) {
       return res.status(404).json({
         success: false,
         error: "Username not found in database",
@@ -468,27 +466,30 @@ router.post("/verify-security-answers", async (req, res) => {
     }
 
     // Fetch user
-    const [users] = await pool.execute(
-      "SELECT id FROM users WHERE username = ?",
-      [username]
-    );
+    const usersSnap = await db
+      .collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get();
 
-    if (users.length === 0) {
+    if (usersSnap.empty) {
       return res.status(404).json({
         success: false,
         error: "User not found",
       });
     }
 
-    const userId = users[0].id;
+    const userDoc = usersSnap.docs[0];
+    const userId = userDoc.id;
 
-    // Fetch security answers
-    const [securityAnswers] = await pool.execute(
-      "SELECT answer_1_hash, answer_2_hash, answer_3_hash FROM security_answers WHERE user_id = ?",
-      [userId]
-    );
+    // Fetch security answers from Firestore
+    const secSnap = await db
+      .collection("security_answers")
+      .where("user_id", "==", userId)
+      .limit(1)
+      .get();
 
-    if (securityAnswers.length === 0) {
+    if (secSnap.empty) {
       return res.status(404).json({
         success: false,
         error: "Security answers not found for user",
@@ -496,7 +497,7 @@ router.post("/verify-security-answers", async (req, res) => {
     }
 
     // Compare answers (case-insensitive, trimmed)
-    const answers = securityAnswers[0];
+    const answers = secSnap.docs[0].data();
     const answerMatches = await Promise.all([
       bcrypt.compare(answer1.toLowerCase().trim(), answers.answer_1_hash),
       bcrypt.compare(answer2.toLowerCase().trim(), answers.answer_2_hash),
@@ -588,29 +589,31 @@ router.post("/reset-password", async (req, res) => {
       });
     }
 
-    // Fetch user
-    const [users] = await pool.execute(
-      "SELECT id FROM users WHERE username = ?",
-      [username]
-    );
+    // Fetch user from Firestore
+    const usersSnap = await db
+      .collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get();
 
-    if (users.length === 0) {
+    if (usersSnap.empty) {
       return res.status(404).json({
         success: false,
         error: "User not found",
       });
     }
 
-    const userId = users[0].id;
+    const userDoc = usersSnap.docs[0];
+    const userId = userDoc.id;
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password in database
-    await pool.execute("UPDATE users SET password_hash = ? WHERE id = ?", [
-      hashedPassword,
-      userId,
-    ]);
+    // Update password in Firestore
+    await db.collection("users").doc(userId).update({
+      password_hash: hashedPassword,
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     console.log(`Password reset successful for user ${username}`);
 

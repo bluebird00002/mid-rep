@@ -30,14 +30,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware - CORS configuration
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || process.env.ALLOWED_ORIGIN || "")
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ||
+  process.env.ALLOWED_ORIGIN ||
+  ""
+)
   .split(",")
   .map((o) => o.trim())
   .filter((o) => o.length > 0);
 
 // Default to localhost for development if no env var is set
 if (allowedOrigins.length === 0) {
-  allowedOrigins.push("http://localhost:5173", "http://localhost:3001", "http://localhost:5174");
+  allowedOrigins.push(
+    "http://localhost:5173",
+    "http://localhost:3001",
+    "http://localhost:5174"
+  );
 }
 
 console.log("🔐 CORS allowed origins:", allowedOrigins);
@@ -61,7 +69,9 @@ app.use(
       }
       // Allow any local network IP (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
       else if (
-        origin.match(/^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i) ||
+        origin.match(
+          /^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i
+        ) ||
         origin.match(/^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/)
       ) {
         callback(null, true);
