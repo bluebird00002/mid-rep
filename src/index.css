@@ -1,0 +1,430 @@
+body {
+    margin: 0;
+    background: linear-gradient(#0000007e, #000000ad), url("./assets/helloWorld.jpg");
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    width: 100vw;
+
+    height: 100vh;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+
+.landing-page-container {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(#00000023, #7b520489), url("./assets/nightlihghts.jpg");
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+
+}
+
+.lp-columns {
+    flex-grow: 1;
+}
+
+.lp-columns:nth-of-type(1) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start
+}
+
+.lp-columns:nth-of-type(2) {
+    display: flex;
+    flex-direction: column;
+
+}
+
+.lp-columns:nth-of-type(3) {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+
+}
+
+.lp-col-3-rows {
+    flex-grow: 1;
+
+}
+
+.lp-col-3-rows:nth-of-type(1) {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
+.lp-col-3-rows:nth-of-type(2) {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-end;
+    color: #ffffffcd;
+}
+
+.bottom-icons {
+    flex-grow: 1;
+    background-color: #00000061;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.56s;
+}
+
+.bottom-icons:hover {
+    color: #ffa600db;
+    background-color: #00000081;
+}
+
+.bottom-icons:nth-of-type(1) {
+    border-top-left-radius: 7px;
+}
+
+.lp-texts {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.lp-texts:nth-of-type(2) {
+    justify-content: flex-end;
+}
+
+.lp-texts p {
+    height: fit-content;
+    width: 70%;
+    text-align: center;
+    padding: 2px;
+    color: #ffffffcd;
+    font-family: sans-serif;
+    font-size: small;
+    font-weight: bold;
+    line-height: 1.4rem;
+    margin: 0;
+}
+
+.lp-texts:nth-of-type(2) p {
+    margin-bottom: 5%;
+
+}
+
+.lp-texts:nth-of-type(1) {
+    justify-content: flex-start;
+}
+
+.lp-texts:nth-of-type(1) p {
+    margin-top: 5%;
+}
+
+.clock-container {
+    width: fit-content;
+    height: fit-content;
+    margin: 0;
+    color: #b6b2b2;
+    -webkit-text-stroke: #cfcaca3c;
+    -webkit-text-stroke-width: 1px;
+    font-size: larger;
+    position: absolute;
+    bottom: 32%;
+    right: 55%;
+    border-bottom: 2px solid #b6b2b2;
+    padding-bottom: 8px;
+}
+
+
+.day-container {
+    position: relative;
+    padding: 10px;
+    font-family: sans-serif;
+    font-weight: bolder;
+}
+
+.formated-day {
+    font-size: 21rem;
+    background: linear-gradient(to bottom, #c1bebe, #00000047 85%);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+
+.formatted-month {
+    color: #f3ecec;
+    font-size: 4rem;
+    position: absolute;
+    color: #b6b2b2;
+    -webkit-text-stroke: #cfcaca3c;
+    -webkit-text-stroke-width: 1px;
+    bottom: 40%;
+    right: -12%;
+}
+
+
+.formatted-week-day {
+    color: #b6b2b2;
+    -webkit-text-stroke: #cfcaca3c;
+    -webkit-text-stroke-width: 1px;
+    transform: rotate(-90deg);
+    position: absolute;
+    bottom: 43%;
+    left: -10%;
+    font-size: 4rem;
+}
+
+
+
+.quote-icon {
+    color: #ffffffcd;
+    width: fit-content;
+}
+
+.app-icon {
+    width: fit-content;
+    height: fit-content;
+    box-shadow: inset 0 0 5px #53390446;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #ffffffcd;
+    cursor: pointer;
+    transition: all 0.56s;
+    padding: 8px;
+
+}
+
+.app-name {
+    font-family: sans-serif;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: bolder;
+}
+
+
+
+.app-icon:hover {
+    transform: scale(1.1);
+    color: #ffa500;
+}
+
+.app-name-i {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bolder;
+    color: #ffa500;
+    padding: 2px;
+}
+
+.app-name-i:hover {
+    color: #ffffff !important;
+}
+
+
+.welcome-text {
+    color: #ffffff;
+}
+
+
+.clock-icon-mob {
+    display: none;
+}
+
+
+.top-icons-par {
+    display: none;
+}
+
+/* Smooth Clock Animation - Subtle Fade */
+@keyframes smoothClockPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.95;
+    }
+}
+
+
+@media screen and (max-width:700px) {
+    .landing-page-container {
+        flex-wrap: wrap;
+        background-image: none;
+        background-color: #ffffff1f;
+        backdrop-filter: blur(2px);
+        flex-direction: column;
+        justify-content: space-around;
+        align-items: center;
+    }
+
+    .lp-columns {
+        width: 100%;
+        height: auto;
+        flex-grow: 0;
+    }
+
+    .lp-columns:nth-of-type(1) {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px 0;
+        order: 1;
+    }
+
+    .lp-columns:nth-of-type(2) {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        padding: 20px;
+        order: 2;
+    }
+
+    .lp-columns:nth-of-type(3) {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        order: 3;
+        padding: 20px 0;
+    }
+
+    .clock-icon {
+        display: none;
+    }
+
+    .clock-icon-mob {
+        display: block;
+        color: #ffffffcd;
+    }
+
+    .day-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 0;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .clock-container {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        margin: 0 auto;
+        padding: 20px 30px;
+        background: linear-gradient(135deg, rgba(255, 166, 0, 0.08), rgba(255, 166, 0, 0.02));
+        border: 1px solid rgba(255, 166, 0, 0.15);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        width: fit-content;
+        text-align: center;
+        animation: smoothClockPulse 4s ease-in-out infinite;
+    }
+
+    .clock-container>div {
+        font-size: 2.8rem;
+        font-weight: 600;
+        color: #ffa500;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        letter-spacing: 2px;
+        margin: 0;
+        animation: none;
+    }
+
+    .formated-day {
+        display: block;
+        font-size: 2.2rem;
+        font-weight: 600;
+        color: #ffa500;
+        margin: 0;
+        letter-spacing: 1px;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .formatted-month {
+        display: block;
+        position: relative;
+        bottom: auto;
+        right: auto;
+        font-size: 0.85rem;
+        color: #b6b2b2;
+        margin: 8px 0 0 0;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 500;
+    }
+
+    .formatted-week-day {
+        display: block;
+        position: relative;
+        bottom: auto;
+        left: auto;
+        transform: none;
+        font-size: 0.85rem;
+        color: #b6b2b2;
+        margin: 4px 0 0 0;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 500;
+    }
+
+    .bottom-icons {
+        display: none;
+    }
+
+    .top-icons-par {
+        display: none !important;
+    }
+
+    .top-icons-mob {
+        display: none !important;
+    }
+
+    .app-icon {
+        margin: 15px;
+        padding: 15px;
+    }
+
+    .lp-texts:nth-of-type(1) {
+        display: none;
+    }
+
+    .lp-texts:nth-of-type(2) {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-grow: 0;
+        width: 100%;
+    }
+
+    .lp-texts p {
+        font-size: 0.85rem;
+        width: 90%;
+        margin: 0;
+        line-height: 1.3;
+    }
+
+    .quote-icon {
+        width: 16px;
+        height: 16px;
+    }
+}

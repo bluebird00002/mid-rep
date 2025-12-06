@@ -1,0 +1,170 @@
+.about-body {
+    width: 100%;
+    background-color: #0a0a0a;
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(255, 166, 0, 0.05) 1px, transparent 0);
+    background-size: 20px 20px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.about-body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom,
+            transparent 0%,
+            rgba(255, 166, 0, 0.02) 50%,
+            transparent 100%);
+    pointer-events: none;
+}
+
+.animation-container {
+    width: 100%;
+    height: 100%;
+    font-size: 1rem;
+    color: #ffa600;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+    padding: 30px;
+    overflow-y: auto !important;
+    box-sizing: border-box;
+    line-height: 1.6;
+    text-shadow: 0 0 5px rgba(255, 166, 0, 0.3);
+}
+
+.animation-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.animation-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.animation-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 166, 0, 0.3);
+    border-radius: 4px;
+}
+
+.animation-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 166, 0, 0.5);
+}
+
+.flex-type {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    width: fit-content;
+    min-height: 24px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.flex-type.long {
+    line-height: 1.8;
+    width: 90%;
+    max-width: 1200px;
+}
+
+.flex-type.list {
+    margin-left: 5vw;
+    padding-left: 10px;
+    border-left: 2px solid rgba(255, 166, 0, 0.2);
+}
+
+.flex-type:nth-of-type(1) {
+    margin-top: 0;
+}
+
+.flex-type input {
+    width: fit-content;
+    min-width: 200px;
+    height: fit-content;
+    outline: 0;
+    border: none;
+    background: none;
+    color: #ffa600;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    padding: 2px 5px;
+    caret-color: #ffa600;
+}
+
+.flex-type input:focus {
+    background: rgba(255, 166, 0, 0.05);
+    border-radius: 2px;
+}
+
+.flex-type input::placeholder {
+    color: rgba(255, 166, 0, 0.5);
+    font-style: italic;
+}
+
+.flex-type input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #888;
+    caret-color: transparent;
+}
+
+.flex-type input.input-readonly {
+    opacity: 0.6;
+    color: #999;
+    cursor: default;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+.MiD-sys {
+    width: fit-content;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    color: #ffa600;
+    font-weight: 600;
+    margin-right: 10px;
+    text-shadow: 0 0 8px rgba(255, 166, 0, 0.5);
+    min-width: 80px;
+}
+
+.MiD-sys svg {
+    margin-left: 5px;
+    color: #ffa600;
+    opacity: 0.7;
+}
+
+/* Enhanced list item styling */
+.flex-type.list .MiD-sys {
+    color: rgba(255, 166, 0, 0.8);
+}
+
+.flex-type.list .MiD-sys svg {
+    color: rgba(255, 166, 0, 0.6);
+}
+
+/* Selection styling */
+::selection {
+    background: rgba(255, 166, 0, 0.3);
+    color: #ffa600;
+}
+
+/* Smooth transitions */
+.flex-type * {
+    transition: all 0.2s ease;
+}

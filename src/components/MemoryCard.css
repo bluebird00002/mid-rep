@@ -1,0 +1,351 @@
+.memory-card {
+  background: rgba(255, 166, 0, 0.05);
+  border: 1px solid rgba(255, 166, 0, 0.2);
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 30px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  color: #ffa600;
+  transition: all 0.3s ease;
+}
+
+.memory-card:hover {
+  background: rgba(255, 166, 0, 0.08);
+  border-color: rgba(255, 166, 0, 0.4);
+  box-shadow: 0 0 10px rgba(255, 166, 0, 0.2);
+}
+
+.memory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 166, 0, 0.1);
+}
+
+.memory-id {
+  color: rgba(255, 166, 0, 0.6);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.memory-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 166, 0, 0.3);
+  color: #ffa600;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.action-btn:hover {
+  background: rgba(255, 166, 0, 0.1);
+  border-color: rgba(255, 166, 0, 0.5);
+}
+
+.delete-btn:hover {
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.5);
+  color: #ff4444;
+}
+
+.memory-content {
+  margin: 15px 0;
+  line-height: 1.6;
+}
+
+.memory-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.memory-table {
+  overflow-x: auto;
+}
+
+.table-title {
+  margin: 0 0 10px 0;
+  color: #ffa600;
+  font-size: 1rem;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 166, 0, 0.3);
+}
+
+.empty-table,
+.empty-list,
+.empty-timeline {
+  color: rgba(255, 166, 0, 0.5);
+  font-style: italic;
+}
+
+.list-title {
+  margin: 0 0 10px 0;
+  color: #ffa600;
+  font-size: 1rem;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 166, 0, 0.3);
+}
+
+.memory-list-container {
+  width: 100%;
+}
+
+.memory-table table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgba(255, 166, 0, 0.2);
+}
+
+.memory-table th,
+.memory-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid rgba(255, 166, 0, 0.1);
+}
+
+.memory-table th {
+  background: rgba(255, 166, 0, 0.1);
+  font-weight: 600;
+  color: #ffa600;
+}
+
+.memory-table td {
+  color: rgba(255, 166, 0, 0.9);
+}
+
+.memory-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.memory-list li {
+  padding: 6px 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.memory-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: rgba(255, 166, 0, 0.6);
+  font-weight: bold;
+}
+
+.memory-timeline-container {
+  width: 100%;
+}
+
+.timeline-title {
+  margin: 0 0 15px 0;
+  color: #ffa600;
+  font-size: 1rem;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 166, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-title-icon {
+  color: rgba(255, 166, 0, 0.8);
+}
+
+.memory-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 5px;
+}
+
+.timeline-event {
+  display: flex;
+  gap: 12px;
+  position: relative;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.timeline-event:hover {
+  background: rgba(255, 166, 0, 0.03);
+}
+
+.timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 16px;
+  position: relative;
+}
+
+.marker-dot {
+  color: #ffa600;
+  fill: rgba(255, 166, 0, 0.3);
+  flex-shrink: 0;
+  z-index: 1;
+  margin-top: 6px;
+}
+
+.timeline-event:hover .marker-dot {
+  fill: rgba(255, 166, 0, 0.6);
+  color: #ffbe4d;
+}
+
+.marker-line {
+  width: 2px;
+  flex: 1;
+  background: linear-gradient(to bottom, rgba(255, 166, 0, 0.4), rgba(255, 166, 0, 0.15));
+  min-height: 20px;
+  margin-top: 4px;
+}
+
+.timeline-content {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 0 15px 0;
+  border-bottom: 1px solid rgba(255, 166, 0, 0.05);
+}
+
+.timeline-event:last-child .timeline-content {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.timeline-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #ffa600;
+  background: rgba(255, 166, 0, 0.1);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  border: 1px solid rgba(255, 166, 0, 0.2);
+  white-space: nowrap;
+}
+
+.timeline-arrow {
+  color: rgba(255, 166, 0, 0.5);
+  margin-left: 4px;
+}
+
+.timeline-description {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  color: rgba(255, 166, 0, 0.9);
+  line-height: 1.5;
+}
+
+.memory-image {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photo-card {
+  background: #fff;
+  padding: 10px 10px 14px 10px;
+  border-radius: 6px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: transform 300ms cubic-bezier(.2, .9, .3, 1), box-shadow 300ms;
+  transform-origin: center center;
+}
+
+.photo-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+.photo-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  border: 6px solid #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.polaroid-caption {
+  margin-top: 8px;
+  color: rgba(0, 0, 0, 0.75);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.image-description {
+  color: rgba(255, 166, 0, 0.8);
+  font-style: italic;
+}
+
+.memory-footer {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 166, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 166, 0, 0.7);
+}
+
+.meta-item.category {
+  background: rgba(255, 166, 0, 0.1);
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 166, 0, 0.2);
+}
+
+.memory-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 166, 0, 0.1);
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(255, 166, 0, 0.2);
+  color: rgba(255, 166, 0, 0.8);
+}
