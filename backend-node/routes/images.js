@@ -199,6 +199,14 @@ router.get("/", async (req, res) => {
       return bTime - aTime;
     });
 
+    const formatTimestamp = (ts) => {
+      if (!ts) return null;
+      if (ts instanceof admin.firestore.Timestamp) {
+        return ts.toDate().toISOString();
+      }
+      return typeof ts === 'string' ? ts : null;
+    };
+
     const formattedImages = images.map((img) => ({
       id: img.id,
       filename: img.filename,
@@ -207,8 +215,8 @@ router.get("/", async (req, res) => {
       description: img.description,
       tags: img.tags || [],
       memory_id: img.memory_id || null,
-      created_at: img.created_at || null,
-      updated_at: img.updated_at || null,
+      created_at: formatTimestamp(img.created_at),
+      updated_at: formatTimestamp(img.updated_at),
     }));
 
     // Filter by tags if provided
@@ -246,6 +254,13 @@ router.get("/:id", async (req, res) => {
     }
 
     const image = { id: doc.id, ...doc.data() };
+    const formatTimestamp = (ts) => {
+      if (!ts) return null;
+      if (ts instanceof admin.firestore.Timestamp) {
+        return ts.toDate().toISOString();
+      }
+      return typeof ts === 'string' ? ts : null;
+    };
     res.json({
       success: true,
       data: {
@@ -257,8 +272,8 @@ router.get("/:id", async (req, res) => {
           description: image.description,
           tags: image.tags || [],
           memory_id: image.memory_id || null,
-          created_at: image.created_at || null,
-          updated_at: image.updated_at || null,
+          created_at: formatTimestamp(image.created_at),
+          updated_at: formatTimestamp(image.updated_at),
         },
       },
       message: "Image retrieved successfully",
