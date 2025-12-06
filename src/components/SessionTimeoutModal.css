@@ -21,7 +21,7 @@
     padding: 40px;
     max-width: 500px;
     width: 90%;
-    box-shadow: 
+    box-shadow:
         0 20px 60px rgba(0, 0, 0, 0.6),
         0 0 40px rgba(186, 113, 4, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -45,10 +45,13 @@
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
         transform: scale(1);
     }
+
     50% {
         opacity: 0.7;
         transform: scale(1.1);

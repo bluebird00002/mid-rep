@@ -2553,12 +2553,16 @@ function MyDiary() {
     addSystemMessage("═══ RETRIEVE MEMORIES ═══");
     addSystemMessage("  show all - Retrieve all memories and images");
     addSystemMessage("  show tags: work - Memories tagged with 'work'");
-    addSystemMessage("  show tags: work, ideas - Memories with any of these tags");
+    addSystemMessage(
+      "  show tags: work, ideas - Memories with any of these tags"
+    );
     addSystemMessage("  show #tag1 #tag2 - Hashtag syntax for tags");
     addSystemMessage("  show category: happy - All in category 'happy'");
     addSystemMessage("  show pictures - All images only");
     addSystemMessage("  show all tables - All table memories");
-    addSystemMessage("  Mother, show happy moments - Natural language retrieval");
+    addSystemMessage(
+      "  Mother, show happy moments - Natural language retrieval"
+    );
     addSystemMessage("");
     addSystemMessage("═══ EDIT & DELETE ═══");
     addSystemMessage('  edit memory #12: "New content" - Update memory text');
@@ -2568,7 +2572,9 @@ function MyDiary() {
     addSystemMessage("  delete memory #12 - Delete single memory");
     addSystemMessage("  delete picture #5 - Delete single image");
     addSystemMessage("  delete image #5 - Same as delete picture");
-    addSystemMessage("  delete all - Delete ALL memories (asks for confirmation)");
+    addSystemMessage(
+      "  delete all - Delete ALL memories (asks for confirmation)"
+    );
     addSystemMessage("  delete memories tags: work - Delete all tagged 'work'");
     addSystemMessage("  delete memories category: happy - Delete in category");
     addSystemMessage("");

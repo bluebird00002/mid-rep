@@ -189,13 +189,22 @@ router.get("/", async (req, res) => {
     const { tags, date } = req.query;
 
     // Query Firestore for this user's images (no orderBy to avoid index requirement)
-    const snapshot = await db.collection("images").where("userId", "==", userId).get();
+    const snapshot = await db
+      .collection("images")
+      .where("userId", "==", userId)
+      .get();
     let images = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     // Sort by created_at in memory (descending)
     images.sort((a, b) => {
-      const aTime = a.created_at instanceof admin.firestore.Timestamp ? a.created_at.toMillis() : 0;
-      const bTime = b.created_at instanceof admin.firestore.Timestamp ? b.created_at.toMillis() : 0;
+      const aTime =
+        a.created_at instanceof admin.firestore.Timestamp
+          ? a.created_at.toMillis()
+          : 0;
+      const bTime =
+        b.created_at instanceof admin.firestore.Timestamp
+          ? b.created_at.toMillis()
+          : 0;
       return bTime - aTime;
     });
 
@@ -204,7 +213,7 @@ router.get("/", async (req, res) => {
       if (ts instanceof admin.firestore.Timestamp) {
         return ts.toDate().toISOString();
       }
-      return typeof ts === 'string' ? ts : null;
+      return typeof ts === "string" ? ts : null;
     };
 
     const formattedImages = images.map((img) => ({
@@ -259,7 +268,7 @@ router.get("/:id", async (req, res) => {
       if (ts instanceof admin.firestore.Timestamp) {
         return ts.toDate().toISOString();
       }
-      return typeof ts === 'string' ? ts : null;
+      return typeof ts === "string" ? ts : null;
     };
     res.json({
       success: true,
