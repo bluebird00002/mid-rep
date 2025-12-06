@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import pool from '../config/database.js';
+import { admin, db } from '../config/firebase.js';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -17,41 +17,57 @@ router.get('/', async (req, res) => {
       });
     }
 
-    let query = 'SELECT * FROM memories WHERE user_id = ?';
-    const params = [userId];
-
-    if (q) {
-      query += ' AND (content LIKE ? OR description LIKE ?)';
-      const searchTerm = `%${q}%`;
-      params.push(searchTerm, searchTerm);
-    }
+    let query = db.collection('memories').where('user_id', '==', userId);
 
     if (category) {
-      query += ' AND category = ?';
-      params.push(category);
+      query = query.where('category', '==', category);
     }
 
+    query = query.orderBy('created_at', 'desc');
+
+    let memories = [];
+    const snap = await query.get();
+
+    snap.docs.forEach(doc => {
+      const data = doc.data();
+      memories.push({
+        id: doc.id,
+        ...data
+      });
+    });
+
+    // Filter by search query (full-text search not available in Firestore, so do in code)
+    if (q) {
+      const lowerQ = q.toLowerCase();
+      memories = memories.filter(mem =>
+        (mem.content && mem.content.toLowerCase().includes(lowerQ)) ||
+        (mem.description && mem.description.toLowerCase().includes(lowerQ))
+      );
+    }
+
+    // Filter by tags if specified
     if (tags) {
-      const tagArray = tags.split(',');
-      for (const tag of tagArray) {
-        query += ' AND JSON_CONTAINS(tags, ?)';
-        params.push(JSON.stringify([tag.trim()]));
-      }
+      const tagArray = tags.split(',').map(t => t.trim());
+      memories = memories.filter(mem =>
+        mem.tags && mem.tags.some(tag => tagArray.includes(tag))
+      );
     }
 
-    query += ' ORDER BY created_at DESC';
-
-    const [memories] = await pool.execute(query, params);
-
-    const formattedMemories = memories.map(row => ({
-      id: row.id,
-      type: row.type,
-      content: row.content,
-      category: row.category,
-      tags: row.tags ? JSON.parse(row.tags) : [],
-      description: row.description,
-      created_at: row.created_at
-    }));
+    const formattedMemories = memories.map(mem => {
+      const created_at = mem.created_at instanceof admin.firestore.Timestamp
+        ? mem.created_at.toDate().toISOString()
+        : mem.created_at;
+      
+      return {
+        id: mem.id,
+        type: mem.type,
+        content: mem.content,
+        category: mem.category,
+        tags: mem.tags || [],
+        description: mem.description,
+        created_at
+      };
+    });
 
     res.json({
       success: true,

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import pool from '../config/database.js';
+import { admin, db } from '../config/firebase.js';
 
 const router = express.Router();
 
@@ -13,46 +13,48 @@ router.get('/', async (req, res) => {
     const userId = req.user.userId;
     const { category, type, tags, date, limit } = req.query;
 
-    let query = 'SELECT * FROM memories WHERE user_id = ?';
-    const params = [userId];
+    let query = db.collection('memories').where('user_id', '==', userId);
 
     if (category) {
-      query += ' AND category = ?';
-      params.push(category);
+      query = query.where('category', '==', category);
     }
 
     if (type) {
-      query += ' AND type = ?';
-      params.push(type);
+      query = query.where('type', '==', type);
     }
 
-    if (tags) {
-      // Support comma-separated tags - find memories containing any of the tags
-      const tagList = tags.split(',').map(t => t.trim());
-      const tagConditions = tagList.map(() => 'JSON_CONTAINS(tags, ?)').join(' OR ');
-      query += ` AND (${tagConditions})`;
-      tagList.forEach(tag => params.push(JSON.stringify(tag)));
-    }
-
-    if (date) {
-      query += ' AND DATE(created_at) LIKE ?';
-      params.push(`${date}%`);
-    }
-
-    query += ' ORDER BY created_at DESC';
+    // Note: Firestore doesn't support OR queries directly in where clauses
+    // For tag filtering, we'll fetch and filter in code
+    query = query.orderBy('created_at', 'desc');
 
     if (limit) {
-      query += ' LIMIT ?';
-      params.push(parseInt(limit));
+      query = query.limit(parseInt(limit));
     }
 
-    const [memories] = await pool.execute(query, params);
+    const snap = await query.get();
+    let memories = snap.docs.map(doc => formatMemory({ id: doc.id, ...doc.data() }));
 
-    const formattedMemories = memories.map(formatMemory);
+    // Filter by tags if specified
+    if (tags) {
+      const tagList = tags.split(',').map(t => t.trim());
+      memories = memories.filter(mem => 
+        mem.tags && mem.tags.some(tag => tagList.includes(tag))
+      );
+    }
+
+    // Filter by date if specified
+    if (date) {
+      memories = memories.filter(mem => {
+        const memDate = mem.created_at instanceof admin.firestore.Timestamp
+          ? mem.created_at.toDate().toISOString().split('T')[0]
+          : mem.created_at?.split('T')[0];
+        return memDate && memDate.startsWith(date);
+      });
+    }
 
     res.json({
       success: true,
-      data: { memories: formattedMemories },
+      data: { memories },
       message: 'Memories retrieved successfully'
     });
   } catch (error) {
@@ -70,12 +72,9 @@ router.get('/:id', async (req, res) => {
     const userId = req.user.userId;
     const memoryId = req.params.id;
 
-    const [memories] = await pool.execute(
-      'SELECT * FROM memories WHERE id = ? AND user_id = ?',
-      [memoryId, userId]
-    );
+    const doc = await db.collection('memories').doc(memoryId).get();
 
-    if (memories.length === 0) {
+    if (!doc.exists || doc.data().user_id !== userId) {
       return res.status(404).json({
         success: false,
         error: 'Memory not found'
@@ -84,7 +83,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: { memory: formatMemory(memories[0]) },
+      data: { memory: formatMemory({ id: doc.id, ...doc.data() }) },
       message: 'Memory retrieved successfully'
     });
   } catch (error) {
@@ -142,24 +141,22 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const [result] = await pool.execute(
-      `INSERT INTO memories 
-       (user_id, type, content, category, tags, \`columns\`, \`rows\`, items, events, description, image_url) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        type,
-        content || null,
-        category || null,
-        JSON.stringify(tagsArray),
-        columns ? JSON.stringify(columns) : null,
-        rows ? JSON.stringify(rows) : null,
-        items ? JSON.stringify(items) : null,
-        events ? JSON.stringify(events) : null,
-        description || null,
-        image_url || null
-      ]
-    );
+    // Create memory in Firestore
+    const docRef = await db.collection('memories').add({
+      user_id: userId,
+      type,
+      content: content || null,
+      category: category || null,
+      tags: tagsArray,
+      columns: columns || null,
+      rows: rows || null,
+      items: items || null,
+      events: events || null,
+      description: description || null,
+      image_url: image_url || null,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+      updated_at: admin.firestore.FieldValue.serverTimestamp()
+    });
 
     // Update tags and categories (non-blocking - don't fail if these fail)
     try {
@@ -182,7 +179,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: { id: result.insertId },
+      data: { id: docRef.id },
       message: 'Memory created successfully'
     });
   } catch (error) {
@@ -208,82 +205,62 @@ router.put('/:id', async (req, res) => {
     const updates = req.body;
 
     // Verify ownership
-    const [memories] = await pool.execute(
-      'SELECT id FROM memories WHERE id = ? AND user_id = ?',
-      [memoryId, userId]
-    );
-
-    if (memories.length === 0) {
+    const doc = await db.collection('memories').doc(memoryId).get();
+    if (!doc.exists || doc.data().user_id !== userId) {
       return res.status(404).json({
         success: false,
         error: 'Memory not found'
       });
     }
 
-    // Build update query
-    const updateFields = [];
-    const updateValues = [];
+    // Build update object
+    const updateData = {
+      updated_at: admin.firestore.FieldValue.serverTimestamp()
+    };
 
     if (updates.content !== undefined) {
-      updateFields.push('content = ?');
-      updateValues.push(updates.content);
+      updateData.content = updates.content;
     }
 
     if (updates.category !== undefined) {
-      updateFields.push('category = ?');
-      updateValues.push(updates.category);
+      updateData.category = updates.category;
     }
 
     if (updates.tags !== undefined) {
-      updateFields.push('tags = ?');
-      updateValues.push(JSON.stringify(updates.tags));
+      updateData.tags = updates.tags;
     }
 
     if (updates.columns !== undefined) {
-      updateFields.push('`columns` = ?');
-      updateValues.push(JSON.stringify(updates.columns));
+      updateData.columns = updates.columns;
     }
 
     if (updates.rows !== undefined) {
-      updateFields.push('`rows` = ?');
-      updateValues.push(JSON.stringify(updates.rows));
+      updateData.rows = updates.rows;
     }
 
     if (updates.items !== undefined) {
-      updateFields.push('items = ?');
-      updateValues.push(JSON.stringify(updates.items));
+      updateData.items = updates.items;
     }
 
     if (updates.events !== undefined) {
-      updateFields.push('events = ?');
-      updateValues.push(JSON.stringify(updates.events));
+      updateData.events = updates.events;
     }
 
     if (updates.add) {
       // Append to existing content
-      const [existing] = await pool.execute(
-        'SELECT content FROM memories WHERE id = ? AND user_id = ?',
-        [memoryId, userId]
-      );
-      if (existing.length > 0) {
-        updateFields.push('content = ?');
-        updateValues.push(existing[0].content + '\n' + updates.add);
-      }
+      const existingData = doc.data();
+      updateData.content = (existingData.content || '') + '\n' + updates.add;
     }
 
-    if (updateFields.length === 0) {
+    if (Object.keys(updateData).length === 1) {
+      // Only updated_at, no actual updates
       return res.status(400).json({
         success: false,
         error: 'No updates provided'
       });
     }
 
-    updateValues.push(memoryId, userId);
-
-    await pool.execute(
-      `UPDATE memories SET ${updateFields.join(', ')} WHERE id = ? AND user_id = ?`,
-      updateValues
-    );
+    await db.collection('memories').doc(memoryId).update(updateData);
 
     res.json({
       success: true,
@@ -305,17 +282,16 @@ router.delete('/:id', async (req, res) => {
     const userId = req.user.userId;
     const memoryId = req.params.id;
 
-    const [result] = await pool.execute(
-      'DELETE FROM memories WHERE id = ? AND user_id = ?',
-      [memoryId, userId]
-    );
-
-    if (result.affectedRows === 0) {
+    // Verify ownership
+    const doc = await db.collection('memories').doc(memoryId).get();
+    if (!doc.exists || doc.data().user_id !== userId) {
       return res.status(404).json({
         success: false,
         error: 'Memory not found'
       });
     }
+
+    await db.collection('memories').doc(memoryId).delete();
 
     res.json({
       success: true,
@@ -336,38 +312,50 @@ router.delete('/', async (req, res) => {
     const userId = req.user.userId;
     const { deleteAll, category, tags } = req.query;
 
-    let query = 'DELETE FROM memories WHERE user_id = ?';
-    const params = [userId];
+    if (deleteAll !== 'true' && !category && !tags) {
+      return res.status(400).json({
+        success: false,
+        error: 'Must specify deleteAll=true, category, or tags for bulk delete'
+      });
+    }
 
-    // If not deleteAll, must have category or tags filter
+    // Fetch matching memories
+    let query = db.collection('memories').where('user_id', '==', userId);
+
     if (deleteAll !== 'true') {
       if (category) {
-        query += ' AND category = ?';
-        params.push(category);
+        query = query.where('category', '==', category);
       }
-      
-      if (tags) {
-        const tagList = tags.split(',').map(t => t.trim());
-        const tagConditions = tagList.map(() => 'JSON_CONTAINS(tags, ?)').join(' OR ');
-        query += ` AND (${tagConditions})`;
-        tagList.forEach(tag => params.push(JSON.stringify(tag)));
-      }
+      // Note: tag filtering happens in code below
+    }
 
-      // If no filters provided, don't allow bulk delete
-      if (!category && !tags) {
-        return res.status(400).json({
-          success: false,
-          error: 'Must specify deleteAll=true, category, or tags for bulk delete'
-        });
+    const snap = await query.get();
+    let docsToDelete = snap.docs;
+
+    // Filter by tags if specified
+    if (tags) {
+      const tagList = tags.split(',').map(t => t.trim());
+      docsToDelete = docsToDelete.filter(doc => {
+        const memTags = doc.data().tags || [];
+        return memTags.some(tag => tagList.includes(tag));
+      });
+    }
+
+    // Delete in batches
+    let deletedCount = 0;
+    const batch = db.batch();
+    for (let i = 0; i < docsToDelete.length; i++) {
+      batch.delete(docsToDelete[i].ref);
+      if ((i + 1) % 500 === 0 || i === docsToDelete.length - 1) {
+        await batch.commit();
+        deletedCount += (i + 1) % 500 || docsToDelete.length % 500;
       }
     }
 
-    const [result] = await pool.execute(query, params);
-
     res.json({
       success: true,
-      data: { deletedCount: result.affectedRows },
-      message: `${result.affectedRows} memories deleted successfully`
+      data: { deletedCount: docsToDelete.length },
+      message: `${docsToDelete.length} memories deleted successfully`
     });
   } catch (error) {
     console.error('Bulk delete error:', error);
@@ -379,41 +367,69 @@ router.delete('/', async (req, res) => {
 });
 
 // Helper functions
-function formatMemory(row) {
+function formatMemory(doc) {
+  const data = doc.data ? doc.data() : doc;
+  const created_at = data.created_at instanceof admin.firestore.Timestamp
+    ? data.created_at.toDate().toISOString()
+    : data.created_at;
+  const updated_at = data.updated_at instanceof admin.firestore.Timestamp
+    ? data.updated_at.toDate().toISOString()
+    : data.updated_at;
+  
   return {
-    id: row.id,
-    type: row.type,
-    content: row.content,
-    category: row.category,
-    tags: row.tags ? JSON.parse(row.tags) : [],
-    columns: row[`columns`] ? JSON.parse(row[`columns`]) : null,
-    rows: row[`rows`] ? JSON.parse(row[`rows`]) : null,
-    items: row.items ? JSON.parse(row.items) : null,
-    events: row.events ? JSON.parse(row.events) : null,
-    description: row.description,
-    image_url: row.image_url,
-    has_image: !!row.image_url,
-    created_at: row.created_at,
-    updated_at: row.updated_at
+    id: doc.id || doc.id,
+    type: data.type,
+    content: data.content,
+    category: data.category,
+    tags: data.tags || [],
+    columns: data.columns || null,
+    rows: data.rows || null,
+    items: data.items || null,
+    events: data.events || null,
+    description: data.description,
+    image_url: data.image_url,
+    has_image: !!data.image_url,
+    created_at,
+    updated_at
   };
 }
 
 async function updateCategoryCount(userId, category) {
-  await pool.execute(
-    `INSERT INTO categories (user_id, name, count) 
-     VALUES (?, ?, 1) 
-     ON DUPLICATE KEY UPDATE count = count + 1`,
-    [userId, category]
-  );
+  const docId = `${userId}_${category}`;
+  const docRef = db.collection('categories').doc(docId);
+  const doc = await docRef.get();
+  
+  if (doc.exists) {
+    await docRef.update({
+      count: admin.firestore.FieldValue.increment(1)
+    });
+  } else {
+    await docRef.set({
+      user_id: userId,
+      name: category,
+      count: 1,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+  }
 }
 
 async function updateTagCount(userId, tag) {
-  await pool.execute(
-    `INSERT INTO tags (user_id, name, count) 
-     VALUES (?, ?, 1) 
-     ON DUPLICATE KEY UPDATE count = count + 1`,
-    [userId, tag]
-  );
+  const docId = `${userId}_${tag}`;
+  const docRef = db.collection('tags').doc(docId);
+  const doc = await docRef.get();
+  
+  if (doc.exists) {
+    await docRef.update({
+      count: admin.firestore.FieldValue.increment(1)
+    });
+  } else {
+    await docRef.set({
+      user_id: userId,
+      name: tag,
+      count: 1,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+  }
 }
 
 export default router;

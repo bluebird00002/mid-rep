@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import pool from '../config/database.js';
+import { db } from '../config/firebase.js';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -10,44 +10,45 @@ router.get('/', async (req, res) => {
     const userId = req.user.userId;
 
     // Get total memories
-    const [memoryCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM memories WHERE user_id = ?',
-      [userId]
-    );
-    const totalMemories = memoryCount[0].total;
+    const memoriesSnap = await db.collection('memories')
+      .where('user_id', '==', userId)
+      .count()
+      .get();
+    const totalMemories = memoriesSnap.data().count;
 
     // Get total images
-    const [imageCount] = await pool.execute(
-      'SELECT COUNT(*) as total FROM images WHERE user_id = ?',
-      [userId]
-    );
-    const totalImages = imageCount[0].total;
+    const imagesSnap = await db.collection('images')
+      .where('user_id', '==', userId)
+      .count()
+      .get();
+    const totalImages = imagesSnap.data().count;
 
     // Get categories
-    const [categories] = await pool.execute(
-      'SELECT name, count FROM categories WHERE user_id = ? ORDER BY count DESC',
-      [userId]
-    );
+    const categoriesSnap = await db.collection('categories')
+      .where('user_id', '==', userId)
+      .orderBy('count', 'desc')
+      .get();
     const categoryMap = {};
-    categories.forEach(cat => {
-      categoryMap[cat.name] = cat.count;
+    categoriesSnap.docs.forEach(doc => {
+      categoryMap[doc.data().name] = doc.data().count;
     });
 
-    // Get tags
-    const [tags] = await pool.execute(
-      'SELECT name, count FROM tags WHERE user_id = ? ORDER BY count DESC LIMIT 20',
-      [userId]
-    );
+    // Get top 20 tags
+    const tagsSnap = await db.collection('tags')
+      .where('user_id', '==', userId)
+      .orderBy('count', 'desc')
+      .limit(20)
+      .get();
     const tagMap = {};
-    tags.forEach(tag => {
-      tagMap[tag.name] = tag.count;
+    tagsSnap.docs.forEach(doc => {
+      tagMap[doc.data().name] = doc.data().count;
     });
 
     res.json({
       success: true,
       data: {
-        total_memories: parseInt(totalMemories),
-        total_images: parseInt(totalImages),
+        total_memories: totalMemories,
+        total_images: totalImages,
         categories: categoryMap,
         tags: tagMap
       },
