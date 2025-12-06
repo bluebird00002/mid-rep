@@ -37,7 +37,15 @@ router.get("/", async (req, res) => {
 
     // Filter by tags if specified (in-memory)
     if (tags) {
-      const tagList = tags.split(",").map((t) => t.trim());
+      let tagList = [];
+      if (Array.isArray(tags)) {
+        tagList = tags.map((t) => String(t).trim()).filter(Boolean);
+      } else {
+        tagList = String(tags)
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+      }
       memories = memories.filter(
         (mem) => mem.tags && mem.tags.some((tag) => tagList.includes(tag))
       );
@@ -93,13 +101,11 @@ router.get("/_debug", async (req, res) => {
     });
   } catch (err) {
     console.error("Memories debug error:", err && (err.stack || err));
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Debug failed",
-        details: err && (err.message || String(err)),
-      });
+    res.status(500).json({
+      success: false,
+      error: "Debug failed",
+      details: err && (err.message || String(err)),
+    });
   }
 });
 
@@ -120,13 +126,11 @@ router.get("/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Get memory error:", error && (error.stack || error));
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Failed to retrieve memory",
-        details: error && (error.message || String(error)),
-      });
+    res.status(500).json({
+      success: false,
+      error: "Failed to retrieve memory",
+      details: error && (error.message || String(error)),
+    });
   }
 });
 
@@ -171,12 +175,10 @@ router.post("/", async (req, res) => {
 
     // Validate required fields
     if (type === "text" && !content)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Content is required for text memories",
-        });
+      return res.status(400).json({
+        success: false,
+        error: "Content is required for text memories",
+      });
 
     const docRef = await db.collection("memories").add({
       user_id: userId,
@@ -207,22 +209,18 @@ router.post("/", async (req, res) => {
       console.warn("Failed to update tag count:", err);
     }
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        data: { id: docRef.id },
-        message: "Memory created successfully",
-      });
+    res.status(201).json({
+      success: true,
+      data: { id: docRef.id },
+      message: "Memory created successfully",
+    });
   } catch (error) {
     console.error("Create memory error:", error && (error.stack || error));
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: error.message || "Failed to create memory",
-        details: error && (error.message || String(error)),
-      });
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to create memory",
+      details: error && (error.message || String(error)),
+    });
   }
 });
 
