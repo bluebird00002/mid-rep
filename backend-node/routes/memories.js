@@ -112,8 +112,19 @@ router.post('/', async (req, res) => {
       image_url
     } = req.body;
 
+    // Debug logging
+    console.log('📝 Create memory request:', {
+      type,
+      content: content?.substring(0, 50),
+      category,
+      tags,
+      tagsType: typeof tags,
+      isArray: Array.isArray(tags)
+    });
+
     // Ensure tags is an array
     const tagsArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
+    console.log('✅ Tags processed:', { original: tags, processed: tagsArray });
 
     // Validate required fields based on type
     if (type === 'text' && !content) {
