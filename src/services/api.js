@@ -3,6 +3,12 @@
 
 // Detect backend URL dynamically based on current location
 function getAPIBaseURL() {
+  // Use environment variable if set (for production)
+  if (import.meta.env.VITE_API_BASE) {
+    return import.meta.env.VITE_API_BASE;
+  }
+
+  // Fallback for local development
   const host = window.location.hostname;
   const port = import.meta.env.VITE_API_PORT || 3000;
 
