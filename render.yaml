@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: mid-diary-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        scope: build,runtime
+      - key: DB_USER
+        scope: build,runtime
+      - key: DB_PASSWORD
+        scope: build,runtime
+      - key: DB_NAME
+        value: mid_diary
+      - key: JWT_SECRET
+        scope: build,runtime
+      - key: ALLOWED_ORIGINS
+        scope: build,runtime
