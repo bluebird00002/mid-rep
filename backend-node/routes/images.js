@@ -143,7 +143,7 @@ router.post("/", upload.single("image"), async (req, res) => {
       updated_at: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    const docRef = await db.collection('images').add(docData);
+    const docRef = await db.collection("images").add(docData);
 
     // Update tags counts in Firestore
     for (const tag of tagsArray) {
@@ -160,7 +160,7 @@ router.post("/", upload.single("image"), async (req, res) => {
         description: docData.description,
         tags: tagsArray,
       },
-      message: 'Image uploaded successfully',
+      message: "Image uploaded successfully",
     });
   } catch (error) {
     console.error("Upload image error:", error);
@@ -189,13 +189,13 @@ router.get("/", async (req, res) => {
     const { tags, date } = req.query;
 
     // Query Firestore for this user's images
-    let imagesQuery = db.collection('images').where('userId', '==', userId);
+    let imagesQuery = db.collection("images").where("userId", "==", userId);
     if (date) {
       // Filter by date (YYYY-MM-DD) by comparing created_at timestamp
       // Firestore stores serverTimestamp; client-side filtering will be used if needed
     }
 
-    imagesQuery = imagesQuery.orderBy('created_at', 'desc');
+    imagesQuery = imagesQuery.orderBy("created_at", "desc");
 
     const snapshot = await imagesQuery.get();
     const images = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -241,9 +241,9 @@ router.get("/:id", async (req, res) => {
     const userId = req.user.userId;
     const imageId = req.params.id;
 
-    const doc = await db.collection('images').doc(imageId).get();
+    const doc = await db.collection("images").doc(imageId).get();
     if (!doc.exists) {
-      return res.status(404).json({ success: false, error: 'Image not found' });
+      return res.status(404).json({ success: false, error: "Image not found" });
     }
 
     const image = { id: doc.id, ...doc.data() };
@@ -262,7 +262,7 @@ router.get("/:id", async (req, res) => {
           updated_at: image.updated_at || null,
         },
       },
-      message: 'Image retrieved successfully',
+      message: "Image retrieved successfully",
     });
   } catch (error) {
     console.error("Get image error:", error);
@@ -280,10 +280,10 @@ router.put("/:id", async (req, res) => {
     const imageId = req.params.id;
     const { description, tags } = req.body;
 
-    const docRef = db.collection('images').doc(imageId);
+    const docRef = db.collection("images").doc(imageId);
     const doc = await docRef.get();
     if (!doc.exists) {
-      return res.status(404).json({ success: false, error: 'Image not found' });
+      return res.status(404).json({ success: false, error: "Image not found" });
     }
 
     const image = { id: doc.id, ...doc.data() };
@@ -306,10 +306,11 @@ router.put("/:id", async (req, res) => {
       success: true,
       data: {
         id: imageId,
-        description: description !== undefined ? description : image.description,
-        tags: tags || (image.tags || []),
+        description:
+          description !== undefined ? description : image.description,
+        tags: tags || image.tags || [],
       },
-      message: 'Image updated successfully',
+      message: "Image updated successfully",
     });
   } catch (error) {
     console.error("Update image error:", error);
@@ -326,10 +327,10 @@ router.delete("/:id", async (req, res) => {
     const userId = req.user.userId;
     const imageId = req.params.id;
 
-    const docRef = db.collection('images').doc(imageId);
+    const docRef = db.collection("images").doc(imageId);
     const doc = await docRef.get();
     if (!doc.exists) {
-      return res.status(404).json({ success: false, error: 'Image not found' });
+      return res.status(404).json({ success: false, error: "Image not found" });
     }
 
     const data = doc.data();
@@ -366,7 +367,7 @@ async function updateTagCount(userId, tag) {
   // Use Firestore to increment tag counts per user
   try {
     const docId = `${userId}_${tag}`;
-    const tagRef = db.collection('tags').doc(docId);
+    const tagRef = db.collection("tags").doc(docId);
     await tagRef.set(
       {
         userId,
@@ -377,7 +378,7 @@ async function updateTagCount(userId, tag) {
       { merge: true }
     );
   } catch (e) {
-    console.warn('Failed to update tag count in Firestore:', e);
+    console.warn("Failed to update tag count in Firestore:", e);
   }
 }
 
