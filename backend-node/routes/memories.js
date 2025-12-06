@@ -122,8 +122,18 @@ router.post('/', async (req, res) => {
       isArray: Array.isArray(tags)
     });
 
-    // Ensure tags is an array
-    const tagsArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
+    // Ensure tags is an array. Accept arrays, comma-separated strings, or single values.
+    let tagsArray = [];
+    if (Array.isArray(tags)) {
+      tagsArray = tags.map(t => (typeof t === 'string' ? t.trim() : t)).filter(Boolean);
+    } else if (typeof tags === 'string') {
+      tagsArray = tags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+    } else if (tags) {
+      tagsArray = [tags];
+    }
     console.log('✅ Tags processed:', { original: tags, processed: tagsArray });
 
     // Validate required fields based on type
@@ -175,11 +185,12 @@ router.post('/', async (req, res) => {
         await updateCategoryCount(userId, category);
       }
     } catch (err) {
-      console.warn('Failed to update category count:', err);
-    }
-    
-    try {
-      if (tagsArray && tagsArray.length > 0) {
+      console.error('Get memories error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve memories',
+        details: process.env.NODE_ENV === 'development' ? (error.message || error.stack) : undefined
+      });
         for (const tag of tagsArray) {
           await updateTagCount(userId, tag);
         }
