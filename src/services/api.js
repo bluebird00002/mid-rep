@@ -193,7 +193,7 @@ class MiDApi {
   // Image Operations
   async uploadImage(imageFile, description, tags = [], album = null) {
     const formData = new FormData();
-    formData.append("image", imageFile);
+    formData.append("file", imageFile);
     if (description) formData.append("description", description);
     formData.append("tags", JSON.stringify(tags));
     if (album) formData.append("album", album);
