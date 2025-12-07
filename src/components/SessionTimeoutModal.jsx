@@ -68,7 +68,7 @@ function SessionTimeoutModal() {
 
             <div className="modal-content">
               <p className="session-message">
-                Your session has been inactive for 10 minutes. For security
+                Your session has been inactive for 5 minutes. For security
                 reasons, you will be logged out.
               </p>
 
