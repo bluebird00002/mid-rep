@@ -1037,14 +1037,14 @@ function MyDiary() {
   };
 
   const handleEditMemory = async (parsed) => {
-    if (!parsed.id && parsed.id !== 0) {
+    if (!parsed.id) {
       addSystemMessage("Please specify memory ID: edit memory #12");
       return;
     }
 
-    // Convert to number for comparison since API might return strings
-    const memoryId = parseInt(parsed.id, 10);
-    const memory = memories.find((m) => parseInt(m.id, 10) === memoryId);
+    // IDs are stored as Firestore doc ids (strings). Use string compare.
+    const memoryId = String(parsed.id);
+    const memory = memories.find((m) => String(m.id) === memoryId);
 
     if (!memory) {
       addSystemMessage(`Memory #${parsed.id} not found.`);

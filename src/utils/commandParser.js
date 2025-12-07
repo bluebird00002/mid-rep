@@ -281,34 +281,12 @@ export class CommandParser {
   }
 
   static parseEditMemory(command) {
-    const idMatch = command.match(/#(\d+)/);
+    // Accept alphanumeric IDs (Firestore doc ids) as well as numeric
+    const idMatch = command.match(/#([A-Za-z0-9_-]+)/);
     const result = {
       type: "edit_memory",
-      id: idMatch ? parseInt(idMatch[1]) : null,
-      updates: {},
-    };
-
-    if (command.includes("add:")) {
-      const addMatch = command.match(/add:\s*["']([^"']+)["']/);
-      if (addMatch) {
-        result.updates.add = addMatch[1];
-      }
-    } else {
-      const contentMatch = command.match(/["']([^"']+)["']|:\s*(.+)$/);
-      if (contentMatch) {
-        result.updates.content = contentMatch[1] || contentMatch[2];
-      }
-    }
-
-    return result;
-  }
-
-  static parseEditMemory(command) {
-    const idMatch = command.match(/#(\d+)/);
-
-    const result = {
-      type: "edit_memory",
-      id: idMatch ? parseInt(idMatch[1]) : null,
+      // Keep id as string so it matches Firestore doc IDs
+      id: idMatch ? idMatch[1] : null,
       updates: {},
     };
 
@@ -329,13 +307,14 @@ export class CommandParser {
 
   static parseDelete(command) {
     const cmd = command.toLowerCase();
-    const idMatch = command.match(/#(\d+)/);
+    // Accept alphanumeric IDs as well
+    const idMatch = command.match(/#([A-Za-z0-9_-]+)/);
     const typeMatch = command.match(/(memory|picture|image)/);
 
     const result = {
       type: "delete",
       target: typeMatch ? typeMatch[1] : "memory",
-      id: idMatch ? parseInt(idMatch[1]) : null,
+      id: idMatch ? idMatch[1] : null,
       deleteAll: false,
       filters: {},
     };
