@@ -2823,7 +2823,6 @@ function MyDiary() {
               </div>
             )}
           </div>
-          </div>
           <div className="profile-info">
             <h3 className="profile-username">{user?.username || "User"}</h3>
             <p className="profile-status">Active</p>
