@@ -237,10 +237,10 @@ router.get("/", async (req, res) => {
       } else {
         tagArray = String(tags).split(",").map((t) => t.trim());
       }
-      tagArray = tagArray.filter(Boolean);
+      tagArray = tagArray.filter(Boolean).map((t) => t.toLowerCase());
       if (tagArray.length) {
         filteredImages = formattedImages.filter((img) =>
-          (img.tags || []).some((tag) => tagArray.includes(String(tag).trim()))
+          (img.tags || []).map((t) => String(t).toLowerCase()).some((tag) => tagArray.includes(tag))
         );
       }
     }
@@ -251,16 +251,21 @@ router.get("/", async (req, res) => {
       const category = req.query.category;
       // If images have an explicit category field, use it; otherwise resolve via linked memories
       const anyHasCategory = filteredImages.some((img) => img.category !== undefined && img.category !== null);
+      const categoryLc = String(category).toLowerCase();
       if (anyHasCategory) {
-        filteredImages = filteredImages.filter((img) => img.category === category);
+        filteredImages = filteredImages.filter((img) => String(img.category || '').toLowerCase() === categoryLc);
       } else {
-        // Resolve memory ids that match the category for this user
+        // Resolve memory ids that match the category for this user (case-insensitive)
         try {
-          const memSnap = await db.collection('memories')
-            .where('user_id', '==', userId)
-            .where('category', '==', category)
-            .get();
-          const memIds = new Set(memSnap.docs.map((d) => d.id));
+          const memSnap = await db.collection('memories').where('user_id', '==', userId).get();
+          const memIds = new Set(
+            memSnap.docs
+              .filter((d) => {
+                const c = d.data().category;
+                return c && String(c).toLowerCase() === categoryLc;
+              })
+              .map((d) => d.id)
+          );
           filteredImages = filteredImages.filter((img) => img.memory_id && memIds.has(img.memory_id));
         } catch (err) {
           console.warn('Failed to resolve image categories via memories:', err);

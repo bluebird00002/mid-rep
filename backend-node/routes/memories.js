@@ -22,33 +22,39 @@ router.get("/", async (req, res) => {
     });
 
     let query = db.collection("memories").where("user_id", "==", userId);
-
-    if (category) query = query.where("category", "==", category);
     if (type) query = query.where("type", "==", type);
 
-    // Order by created_at (may be missing for some docs)
-    query = query.orderBy("created_at", "desc");
-    if (limit) query = query.limit(parseInt(limit));
-
+    // Do not use server-side orderBy to avoid composite index requirements.
+    // We'll fetch the user's documents and apply filters/sorting in-memory.
     const snap = await query.get();
-    let memories = snap.docs.map((doc) =>
-      formatMemory({ id: doc.id, ...doc.data() })
-    );
+    let memories = snap.docs.map((doc) => formatMemory({ id: doc.id, ...doc.data() }));
+
+    // Apply in-memory sorting by created_at (newest first)
+    memories.sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    // Apply limit in-memory if provided
+    if (limit) memories = memories.slice(0, parseInt(limit));
 
     // Filter by tags if specified (in-memory)
+    // Filter by tags if specified (in-memory) - case-insensitive
     if (tags) {
       let tagList = [];
       if (Array.isArray(tags)) {
-        tagList = tags.map((t) => String(t).trim()).filter(Boolean);
+        tagList = tags.flatMap((t) => String(t).split(",")).map((t) => t.trim());
       } else {
-        tagList = String(tags)
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
+        tagList = String(tags).split(",").map((t) => t.trim());
       }
-      memories = memories.filter(
-        (mem) => mem.tags && mem.tags.some((tag) => tagList.includes(tag))
-      );
+      tagList = tagList.filter(Boolean).map((t) => t.toLowerCase());
+      if (tagList.length) {
+        memories = memories.filter((mem) => {
+          const memTags = (mem.tags || []).map((t) => String(t).toLowerCase());
+          return memTags.some((mt) => tagList.includes(mt));
+        });
+      }
     }
 
     // Filter by date if specified (in-memory)
@@ -59,6 +65,15 @@ router.get("/", async (req, res) => {
             ? mem.created_at.toDate().toISOString().split("T")[0]
             : mem.created_at?.split("T")[0];
         return memDate && memDate.startsWith(date);
+      });
+    }
+
+    // Filter by category if specified (in-memory) - case-insensitive
+    if (category) {
+      const categoryLc = String(category).toLowerCase();
+      memories = memories.filter((mem) => {
+        const memCat = mem.category ? String(mem.category).toLowerCase() : null;
+        return memCat === categoryLc;
       });
     }
 
@@ -346,26 +361,32 @@ router.delete("/", async (req, res) => {
       });
     }
 
-    // Fetch matching memories
+    // Fetch matching memories (base: all user's memories)
     let query = db.collection("memories").where("user_id", "==", userId);
-
-    if (deleteAll !== "true") {
-      if (category) {
-        query = query.where("category", "==", category);
-      }
-      // Note: tag filtering happens in code below
-    }
-
     const snap = await query.get();
     let docsToDelete = snap.docs;
 
-    // Filter by tags if specified
-    if (tags) {
-      const tagList = tags.split(",").map((t) => t.trim());
+    // Filter by category if specified (case-insensitive)
+    if (category) {
+      const categoryLc = String(category).toLowerCase();
       docsToDelete = docsToDelete.filter((doc) => {
-        const memTags = doc.data().tags || [];
-        return memTags.some((tag) => tagList.includes(tag));
+        const memCat = doc.data().category ? String(doc.data().category).toLowerCase() : null;
+        return memCat === categoryLc;
       });
+    }
+
+    // Filter by tags if specified (case-insensitive)
+    if (tags) {
+      let tagList = [];
+      if (Array.isArray(tags)) tagList = tags.flatMap((t) => String(t).split(",")).map((t) => t.trim());
+      else tagList = String(tags).split(",").map((t) => t.trim());
+      tagList = tagList.filter(Boolean).map((t) => t.toLowerCase());
+      if (tagList.length) {
+        docsToDelete = docsToDelete.filter((doc) => {
+          const memTags = (doc.data().tags || []).map((t) => String(t).toLowerCase());
+          return memTags.some((mt) => tagList.includes(mt));
+        });
+      }
     }
 
     // Delete in batches
