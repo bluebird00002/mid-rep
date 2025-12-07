@@ -111,15 +111,16 @@ if (
 }
 
 // Upload image
-router.post("/", upload.single("file"), async (req, res) => {
+router.post("/", upload.fields([{ name: "file", maxCount: 1 }]), async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.files || !req.files.file || !req.files.file[0]) {
       return res.status(400).json({
         success: false,
         error: "No image file provided",
       });
     }
 
+    const file = req.files.file[0];
     const userId = req.user.userId;
     const { description = "", tags = "[]", folder } = req.body;
 
@@ -128,8 +129,8 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(201).json({
         success: true,
         data: {
-          image_url: req.file.location || req.file.path,
-          filename: req.file.filename || req.file.public_id,
+          image_url: file.location || file.path,
+          filename: file.filename || file.public_id,
         },
         message: "Profile image uploaded successfully",
       });
@@ -146,9 +147,9 @@ router.post("/", upload.single("file"), async (req, res) => {
     // Save metadata to Firestore
     const docData = {
       userId,
-      filename: req.file.filename || req.file.public_id || null,
-      original_name: req.file.originalname,
-      file_path: req.file.path || req.file.location || null,
+      filename: file.filename || file.public_id || null,
+      original_name: file.originalname,
+      file_path: file.path || file.location || null,
       description,
       tags: tagsArray,
       memory_id: null,
@@ -177,9 +178,9 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
   } catch (error) {
     console.error("Upload image error:", error);
-    if (req.file) {
+    if (file) {
       // If file is on disk, remove it. Cloudinary uploads are remote URLs, so skip.
-      const localPath = req.file.path;
+      const localPath = file.path;
       try {
         if (localPath && fs.existsSync(localPath)) {
           fs.unlinkSync(localPath);
