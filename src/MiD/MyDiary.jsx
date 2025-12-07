@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import {
   ChevronRight,
   Send,
-  Image as ImageIcon,
   Loader2,
   LogOut,
 } from "lucide-react";
@@ -2765,20 +2764,6 @@ function MyDiary() {
                   spellCheck={false}
                 />
               </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="image-button-inline"
-                title="Upload Image"
-              >
-                <ImageIcon size={16} />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={{ display: "none" }}
-              />
             </div>
           </div>
         </div>

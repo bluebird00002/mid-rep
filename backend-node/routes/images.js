@@ -233,14 +233,20 @@ router.get("/", async (req, res) => {
     if (tags) {
       let tagArray = [];
       if (Array.isArray(tags)) {
-        tagArray = tags.flatMap((t) => String(t).split(",")).map((t) => t.trim());
+        tagArray = tags
+          .flatMap((t) => String(t).split(","))
+          .map((t) => t.trim());
       } else {
-        tagArray = String(tags).split(",").map((t) => t.trim());
+        tagArray = String(tags)
+          .split(",")
+          .map((t) => t.trim());
       }
       tagArray = tagArray.filter(Boolean).map((t) => t.toLowerCase());
       if (tagArray.length) {
         filteredImages = formattedImages.filter((img) =>
-          (img.tags || []).map((t) => String(t).toLowerCase()).some((tag) => tagArray.includes(tag))
+          (img.tags || [])
+            .map((t) => String(t).toLowerCase())
+            .some((tag) => tagArray.includes(tag))
         );
       }
     }
@@ -250,14 +256,21 @@ router.get("/", async (req, res) => {
     if (req.query.category) {
       const category = req.query.category;
       // If images have an explicit category field, use it; otherwise resolve via linked memories
-      const anyHasCategory = filteredImages.some((img) => img.category !== undefined && img.category !== null);
+      const anyHasCategory = filteredImages.some(
+        (img) => img.category !== undefined && img.category !== null
+      );
       const categoryLc = String(category).toLowerCase();
       if (anyHasCategory) {
-        filteredImages = filteredImages.filter((img) => String(img.category || '').toLowerCase() === categoryLc);
+        filteredImages = filteredImages.filter(
+          (img) => String(img.category || "").toLowerCase() === categoryLc
+        );
       } else {
         // Resolve memory ids that match the category for this user (case-insensitive)
         try {
-          const memSnap = await db.collection('memories').where('user_id', '==', userId).get();
+          const memSnap = await db
+            .collection("memories")
+            .where("user_id", "==", userId)
+            .get();
           const memIds = new Set(
             memSnap.docs
               .filter((d) => {
@@ -266,9 +279,11 @@ router.get("/", async (req, res) => {
               })
               .map((d) => d.id)
           );
-          filteredImages = filteredImages.filter((img) => img.memory_id && memIds.has(img.memory_id));
+          filteredImages = filteredImages.filter(
+            (img) => img.memory_id && memIds.has(img.memory_id)
+          );
         } catch (err) {
-          console.warn('Failed to resolve image categories via memories:', err);
+          console.warn("Failed to resolve image categories via memories:", err);
           // fallback: filter none
           filteredImages = [];
         }

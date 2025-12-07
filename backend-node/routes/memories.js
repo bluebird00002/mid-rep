@@ -27,7 +27,9 @@ router.get("/", async (req, res) => {
     // Do not use server-side orderBy to avoid composite index requirements.
     // We'll fetch the user's documents and apply filters/sorting in-memory.
     const snap = await query.get();
-    let memories = snap.docs.map((doc) => formatMemory({ id: doc.id, ...doc.data() }));
+    let memories = snap.docs.map((doc) =>
+      formatMemory({ id: doc.id, ...doc.data() })
+    );
 
     // Apply in-memory sorting by created_at (newest first)
     memories.sort((a, b) => {
@@ -44,9 +46,13 @@ router.get("/", async (req, res) => {
     if (tags) {
       let tagList = [];
       if (Array.isArray(tags)) {
-        tagList = tags.flatMap((t) => String(t).split(",")).map((t) => t.trim());
+        tagList = tags
+          .flatMap((t) => String(t).split(","))
+          .map((t) => t.trim());
       } else {
-        tagList = String(tags).split(",").map((t) => t.trim());
+        tagList = String(tags)
+          .split(",")
+          .map((t) => t.trim());
       }
       tagList = tagList.filter(Boolean).map((t) => t.toLowerCase());
       if (tagList.length) {
@@ -370,7 +376,9 @@ router.delete("/", async (req, res) => {
     if (category) {
       const categoryLc = String(category).toLowerCase();
       docsToDelete = docsToDelete.filter((doc) => {
-        const memCat = doc.data().category ? String(doc.data().category).toLowerCase() : null;
+        const memCat = doc.data().category
+          ? String(doc.data().category).toLowerCase()
+          : null;
         return memCat === categoryLc;
       });
     }
@@ -378,12 +386,20 @@ router.delete("/", async (req, res) => {
     // Filter by tags if specified (case-insensitive)
     if (tags) {
       let tagList = [];
-      if (Array.isArray(tags)) tagList = tags.flatMap((t) => String(t).split(",")).map((t) => t.trim());
-      else tagList = String(tags).split(",").map((t) => t.trim());
+      if (Array.isArray(tags))
+        tagList = tags
+          .flatMap((t) => String(t).split(","))
+          .map((t) => t.trim());
+      else
+        tagList = String(tags)
+          .split(",")
+          .map((t) => t.trim());
       tagList = tagList.filter(Boolean).map((t) => t.toLowerCase());
       if (tagList.length) {
         docsToDelete = docsToDelete.filter((doc) => {
-          const memTags = (doc.data().tags || []).map((t) => String(t).toLowerCase());
+          const memTags = (doc.data().tags || []).map((t) =>
+            String(t).toLowerCase()
+          );
           return memTags.some((mt) => tagList.includes(mt));
         });
       }
