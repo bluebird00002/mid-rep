@@ -1,7 +1,7 @@
 import React from "react";
 import "./SessionTimeoutModal.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, LogOut, CheckCircle } from "lucide-react";
+import { Clock, LogOut, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
@@ -50,72 +50,78 @@ function SessionTimeoutModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             onClick={handleLogout}
           />
 
           {/* Modal */}
           <motion.div
             className="session-timeout-modal"
-            initial={{ opacity: 0, scale: 0.8, y: -50 }}
+            initial={{ opacity: 0, scale: 0.7, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -50 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            exit={{ opacity: 0, scale: 0.7, y: 20 }}
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
           >
-            <div className="modal-header">
-              <Clock size={28} className="modal-icon" />
-              <h2>Session Timeout</h2>
-            </div>
-
-            <div className="modal-content">
-              <p className="session-message">
-                Your session has been inactive for 5 minutes. For security
-                reasons, you will be logged out.
-              </p>
-
-              <div className="countdown-section">
-                <p className="countdown-label">Logging out in:</p>
+            <div className="modal-card">
+              {/* Header */}
+              <div className="modal-header">
                 <motion.div
-                  className="countdown-timer"
-                  animate={{ scale: countdown <= 10 ? [1, 1.1, 1] : 1 }}
-                  transition={{
-                    duration: 0.5,
-                    repeat: countdown <= 10 ? Infinity : 0,
-                  }}
+                  className="header-icon"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                 >
-                  {countdown}s
+                  <Shield size={32} />
+                </motion.div>
+                <div>
+                  <h2>Session Timeout</h2>
+                  <p className="header-subtitle">Security Check</p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="modal-content">
+                <p className="session-message">
+                  Your session has been inactive for 5 minutes. You will be logged out for security.
+                </p>
+
+                {/* Countdown */}
+                <motion.div
+                  className="countdown-container"
+                  animate={{ scale: countdown <= 10 ? [1, 1.05, 1] : 1 }}
+                  transition={{ duration: 0.6, repeat: countdown <= 10 ? Infinity : 0 }}
+                >
+                  <span className="countdown-label">Logging out in</span>
+                  <span className="countdown-number">{countdown}s</span>
                 </motion.div>
               </div>
 
-              <p className="session-question">
-                Would you like to stay logged in?
-              </p>
-            </div>
+              {/* Actions */}
+              <div className="modal-actions">
+                <motion.button
+                  className="btn btn-stay"
+                  onClick={handleStayLoggedIn}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Shield size={18} />
+                  <span>Stay Logged In</span>
+                </motion.button>
 
-            <div className="modal-actions">
-              <motion.button
-                className="btn-stay-logged-in"
-                onClick={handleStayLoggedIn}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <CheckCircle size={18} />
-                Stay Logged In
-              </motion.button>
+                <motion.button
+                  className="btn btn-logout"
+                  onClick={handleLogout}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </motion.button>
+              </div>
 
-              <motion.button
-                className="btn-logout"
-                onClick={handleLogout}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <LogOut size={18} />
-                Logout
-              </motion.button>
-            </div>
-
-            <div className="modal-footer">
-              <p className="security-note">
-                This is a security feature to protect your account.
+              {/* Footer */}
+              <p className="modal-footer">
+                <Clock size={12} />
+                Auto logout in {countdown} seconds
               </p>
             </div>
           </motion.div>
@@ -126,3 +132,4 @@ function SessionTimeoutModal() {
 }
 
 export default SessionTimeoutModal;
+

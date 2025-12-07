@@ -15,7 +15,6 @@ import CommandParser from "../utils/commandParser";
 import api from "../services/api";
 import MemoryCard from "../components/MemoryCard";
 import ImageCropper from "../components/ImageCropper";
-import SessionTimeoutModal from "../components/SessionTimeoutModal";
 import { useAuth } from "../context/AuthContext";
 import "./MyDiary.css";
 import "@fontsource/jetbrains-mono";
@@ -2770,7 +2769,6 @@ function MyDiary() {
 
   return (
     <div className="diary-container">
-      <SessionTimeoutModal />
       {/* Profile Header Section */}
       <div className="diary-profile-header">
         <div className="profile-card">
