@@ -3,8 +3,8 @@ services:
     name: mid-diary-backend
     env: node
     plan: free
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && npm start
+    buildCommand: cd backend-node && npm install
+    startCommand: cd backend-node && npm start
     envVars:
       - key: NODE_ENV
         value: production
