@@ -2820,7 +2820,6 @@ function MyDiary() {
             <span className="title-status">● Online</span>
           </div>
           <div className="terminal-user">
-            <span className="user-name">{user?.username || "User"}</span>
             <button
               onClick={() => {
                 logout();
