@@ -1,12 +1,7 @@
 import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import {
-  ChevronRight,
-  Send,
-  Loader2,
-  LogOut,
-} from "lucide-react";
+import { ChevronRight, Send, Loader2, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CommandParser from "../utils/commandParser";
 import api from "../services/api";
@@ -2764,6 +2759,14 @@ function MyDiary() {
                   spellCheck={false}
                 />
               </div>
+              {/* Hidden file input for image upload via "save picture" command */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: "none" }}
+              />
             </div>
           </div>
         </div>
