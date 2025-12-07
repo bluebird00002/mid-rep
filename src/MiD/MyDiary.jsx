@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import CommandParser from "../utils/commandParser";
 import api from "../services/api";
 import MemoryCard from "../components/MemoryCard";
+import ImageCropper from "../components/ImageCropper";
 import { useAuth } from "../context/AuthContext";
 import "./MyDiary.css";
 import "@fontsource/jetbrains-mono";
@@ -30,6 +31,8 @@ function MyDiary() {
   const [timelineBuilder, setTimelineBuilder] = useState(null); // { step: 'title'|'events'|'tags'|'category', data: {...} }
   const [timelineEditor, setTimelineEditor] = useState(null); // { step: 'menu'|..., memory: {...}, data: {...} }
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
+  const [showProfileCropper, setShowProfileCropper] = useState(false);
+  const [profileCropperFile, setProfileCropperFile] = useState(null);
   const commandInputRef = useRef(null);
   const historyEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -2674,9 +2677,29 @@ function MyDiary() {
       return;
     }
 
+    // Check minimum dimensions
+    const img = new Image();
+    img.onload = () => {
+      if (img.width < 200 || img.height < 200) {
+        addSystemMessage("Image must be at least 200×200 pixels");
+        return;
+      }
+      setProfileCropperFile(file);
+      setShowProfileCropper(true);
+    };
+    img.onerror = () => {
+      addSystemMessage("Failed to load image");
+    };
+    img.src = URL.createObjectURL(file);
+  };
+
+  const handleProfileCropComplete = async (croppedBlob) => {
+    setShowProfileCropper(false);
+    setProfileCropperFile(null);
+    
     setUploadingProfileImage(true);
     try {
-      const result = await api.uploadProfileImageToCloudinary(file);
+      const result = await api.uploadProfileImageToCloudinary(croppedBlob);
       if (result.success) {
         const imageUrl = result.data.image_url;
         await api.updateProfileImage(imageUrl);
@@ -2698,6 +2721,15 @@ function MyDiary() {
       if (profileImageInputRef.current) {
         profileImageInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleProfileCropCancel = () => {
+    setShowProfileCropper(false);
+    setProfileCropperFile(null);
+    // Reset file input
+    if (profileImageInputRef.current) {
+      profileImageInputRef.current.value = "";
     }
   };
 
@@ -2857,6 +2889,14 @@ function MyDiary() {
                 style={{ display: "none" }}
               />
             </div>
+            {/* Profile Image Cropper Modal */}
+            {showProfileCropper && profileCropperFile && (
+              <ImageCropper
+                imageFile={profileCropperFile}
+                onCrop={handleProfileCropComplete}
+                onCancel={handleProfileCropCancel}
+              />
+            )}
           </div>
         </div>
       </div>

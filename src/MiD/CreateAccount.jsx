@@ -18,6 +18,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../hooks/useNotification";
 import Notification from "../components/Notification";
+import ImageCropper from "../components/ImageCropper";
 import api from "../services/api";
 
 function CreateAccount() {
@@ -29,6 +30,8 @@ function CreateAccount() {
   const [answer3, setAnswer3] = useState("");
   const [profileImage, setProfileImage] = useState(null);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
+  const [showCropper, setShowCropper] = useState(false);
+  const [tempImageFile, setTempImageFile] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -87,13 +90,37 @@ function CreateAccount() {
         showError("Image size must be less than 10MB");
         return;
       }
-      setProfileImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImagePreview(reader.result);
+      // Check minimum dimensions
+      const img = new Image();
+      img.onload = () => {
+        if (img.width < 200 || img.height < 200) {
+          showError("Image must be at least 200×200 pixels");
+          return;
+        }
+        setTempImageFile(file);
+        setShowCropper(true);
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        showError("Failed to load image");
+      };
+      img.src = URL.createObjectURL(file);
     }
+  };
+
+  const handleCropComplete = (croppedBlob) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setProfileImage(croppedBlob);
+      setProfileImagePreview(e.target.result);
+      setShowCropper(false);
+      setTempImageFile(null);
+    };
+    reader.readAsDataURL(croppedBlob);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setTempImageFile(null);
   };
 
   const uploadProfileImage = async () => {
@@ -536,6 +563,13 @@ function CreateAccount() {
                 </div>
               </form>
             </div>
+            {showCropper && tempImageFile && (
+              <ImageCropper
+                imageFile={tempImageFile}
+                onCrop={handleCropComplete}
+                onCancel={handleCropCancel}
+              />
+            )}
             <Notification
               notification={notification}
               onClose={hideNotification}
