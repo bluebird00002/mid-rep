@@ -701,23 +701,24 @@ router.put("/profile-image", async (req, res) => {
     const userId = decoded.userId;
     const { profile_image_url } = req.body;
 
-    if (!profile_image_url) {
-      return res
-        .status(400)
-        .json({ success: false, error: "profile_image_url is required" });
+    // Allow null/undefined to remove profile image
+    const updateData = {
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    // If profile_image_url is provided (even if empty), update it
+    if ("profile_image_url" in req.body) {
+      updateData.profile_image_url = profile_image_url || null;
     }
 
     // Update user profile image in Firestore
-    await db.collection("users").doc(userId).update({
-      profile_image_url,
-      updated_at: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    await db.collection("users").doc(userId).update(updateData);
 
     console.log(`Profile image updated for user ${userId}`);
 
     res.json({
       success: true,
-      data: { profile_image_url },
+      data: { profile_image_url: profile_image_url || null },
       message: "Profile image updated successfully",
     });
   } catch (error) {

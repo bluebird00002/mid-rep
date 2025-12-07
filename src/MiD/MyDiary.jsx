@@ -42,6 +42,7 @@ function MyDiary() {
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const [showProfileCropper, setShowProfileCropper] = useState(false);
   const [profileCropperFile, setProfileCropperFile] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const commandInputRef = useRef(null);
   const historyEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -2669,6 +2670,11 @@ function MyDiary() {
   };
 
   const handleProfileImageClick = () => {
+    setShowProfileMenu(!showProfileMenu);
+  };
+
+  const handleChangeProfileImage = () => {
+    setShowProfileMenu(false);
     profileImageInputRef.current?.click();
   };
 
@@ -2743,7 +2749,9 @@ function MyDiary() {
   };
 
   const handleRemoveProfileImage = async () => {
+    setShowProfileMenu(false);
     try {
+      setUploadingProfileImage(true);
       // Update profile to remove image URL
       await api.updateProfileImage(null);
 
@@ -2755,6 +2763,8 @@ function MyDiary() {
       addSystemMessage("Profile picture removed successfully!");
     } catch (error) {
       addSystemMessage(`Error removing profile picture: ${error.message}`);
+    } finally {
+      setUploadingProfileImage(false);
     }
   };
 
@@ -2769,7 +2779,7 @@ function MyDiary() {
               className="profile-image-btn"
               onClick={handleProfileImageClick}
               disabled={uploadingProfileImage}
-              title="Click to change profile image"
+              title="Click to change profile image or remove"
             >
               {user?.profile_image_url ? (
                 <img
@@ -2788,16 +2798,31 @@ function MyDiary() {
                 </div>
               )}
             </button>
-            {user?.profile_image_url && (
-              <button
-                className="profile-image-remove-btn"
-                onClick={handleRemoveProfileImage}
-                disabled={uploadingProfileImage}
-                title="Remove profile image"
-              >
-                <X size={14} />
-              </button>
+            
+            {/* Profile Menu Popup */}
+            {showProfileMenu && (
+              <div className="profile-menu">
+                <button
+                  className="profile-menu-item"
+                  onClick={handleChangeProfileImage}
+                  disabled={uploadingProfileImage}
+                >
+                  <Edit2 size={16} />
+                  <span>Change Picture</span>
+                </button>
+                {user?.profile_image_url && (
+                  <button
+                    className="profile-menu-item remove"
+                    onClick={handleRemoveProfileImage}
+                    disabled={uploadingProfileImage}
+                  >
+                    <X size={16} />
+                    <span>Remove Picture</span>
+                  </button>
+                )}
+              </div>
             )}
+          </div>
           </div>
           <div className="profile-info">
             <h3 className="profile-username">{user?.username || "User"}</h3>
