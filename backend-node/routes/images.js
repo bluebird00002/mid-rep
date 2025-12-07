@@ -35,17 +35,17 @@ if (
 
   const cloudinaryStorage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-      folder: process.env.CLOUDINARY_FOLDER || "mid-uploads",
-      format: async (req, file) => {
-        // Preserve original format
-        const ext = path.extname(file.originalname).replace(".", "");
-        return ext || "jpg";
-      },
-      public_id: (req, file) => {
-        const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        return `img_${unique}`;
-      },
+    params: async (req, file) => {
+      // Determine folder based on request
+      const folder = req.body?.folder || process.env.CLOUDINARY_FOLDER || "mid-uploads";
+      const ext = path.extname(file.originalname).replace(".", "");
+      const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      
+      return {
+        folder: folder,
+        format: ext || "jpg",
+        public_id: `img_${unique}`,
+      };
     },
   });
 
@@ -110,7 +110,7 @@ if (
 }
 
 // Upload image
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -120,7 +120,19 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     const userId = req.user.userId;
-    const { description = "", tags = "[]" } = req.body;
+    const { description = "", tags = "[]", folder } = req.body;
+    
+    // If this is a profile image upload, just return the URL
+    if (folder === "mid-profile-pics") {
+      return res.status(201).json({
+        success: true,
+        data: {
+          image_url: req.file.location || req.file.path,
+          filename: req.file.filename || req.file.public_id,
+        },
+        message: "Profile image uploaded successfully",
+      });
+    }
 
     let tagsArray = [];
     try {

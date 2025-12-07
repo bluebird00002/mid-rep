@@ -113,11 +113,16 @@ class MiDApi {
     });
   }
 
-  async register(username, password, securityAnswers) {
+  async register(username, password, securityAnswers, profileImageUrl = null) {
     const body = {
       username,
       password,
     };
+
+    // Add profile image if provided
+    if (profileImageUrl) {
+      body.profile_image_url = profileImageUrl;
+    }
 
     // Add security answers if provided
     if (securityAnswers) {
@@ -285,6 +290,49 @@ class MiDApi {
   // Categories
   async getCategories() {
     return this.request("/categories");
+  }
+
+  // Profile Image Operations
+  async getProfile() {
+    return this.request("/auth/profile");
+  }
+
+  async uploadProfileImageToCloudinary(file) {
+    // This uses the existing images endpoint to upload to Cloudinary
+    // We'll pass a special folder param to store in profile-pics
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "mid-profile-pics");
+
+    const headers = {};
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseURL}/images`, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let error = { error: "Profile image upload failed" };
+      try {
+        error = await response.json();
+      } catch (e) {
+        // ignore
+      }
+      throw new Error(error.error || "Profile image upload failed");
+    }
+
+    return response.json();
+  }
+
+  async updateProfileImage(profileImageUrl) {
+    return this.request("/auth/profile-image", {
+      method: "PUT",
+      body: JSON.stringify({ profile_image_url: profileImageUrl }),
+    });
   }
 }
 

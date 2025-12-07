@@ -14,7 +14,7 @@ router.use((req, res, next) => {
 // Register new user
 router.post("/register", async (req, res) => {
   try {
-    const { username, password, securityAnswers } = req.body;
+    const { username, password, securityAnswers, profile_image_url } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({
@@ -82,6 +82,7 @@ router.post("/register", async (req, res) => {
     const userRef = await db.collection("users").add({
       username,
       password_hash: hashedPassword,
+      profile_image_url: profile_image_url || null,
       created_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -99,7 +100,7 @@ router.post("/register", async (req, res) => {
       created_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ User created: ${username} with security answers`);
+    console.log(`✅ User created: ${username} with security answers and profile image`);
 
     // Generate JWT token
     const jwtSecret =
@@ -116,6 +117,7 @@ router.post("/register", async (req, res) => {
         user: {
           id: userId,
           username,
+          profile_image_url: profile_image_url || null,
         },
       },
       message: "Account created successfully",
@@ -243,6 +245,7 @@ router.post("/login", async (req, res) => {
           user: {
             id: user.id,
             username: user.username,
+            profile_image_url: user.profile_image_url || null,
           },
           isFirstLogin: isFirstLogin,
         },
@@ -258,6 +261,7 @@ router.post("/login", async (req, res) => {
           user: {
             id: user.id,
             username: user.username,
+            profile_image_url: user.profile_image_url || null,
           },
           isFirstLogin: false, // Default to false if tracking fails
         },
@@ -627,6 +631,90 @@ router.post("/reset-password", async (req, res) => {
       success: false,
       error: "Failed to reset password",
     });
+  }
+});
+
+// Get user profile (including profile image URL)
+router.get("/profile", async (req, res) => {
+  try {
+    // Extract userId from Authorization header (format: "Bearer <token>")
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    const token = authHeader.substring(7);
+    const jwtSecret = process.env.JWT_SECRET || "mid-development-secret-key-change-in-production-2024";
+    let decoded;
+    try {
+      decoded = jwt.verify(token, jwtSecret);
+    } catch (err) {
+      return res.status(401).json({ success: false, error: "Invalid token" });
+    }
+
+    const userId = decoded.userId;
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    const userData = userDoc.data();
+    res.json({
+      success: true,
+      data: {
+        id: userId,
+        username: userData.username,
+        profile_image_url: userData.profile_image_url || null,
+      },
+    });
+  } catch (error) {
+    console.error("Get profile error:", error);
+    res.status(500).json({ success: false, error: "Failed to get profile" });
+  }
+});
+
+// Upload/Update profile image (expects JSON body with profile_image_url from Cloudinary)
+router.put("/profile-image", async (req, res) => {
+  try {
+    // Extract userId from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    const token = authHeader.substring(7);
+    const jwtSecret = process.env.JWT_SECRET || "mid-development-secret-key-change-in-production-2024";
+    let decoded;
+    try {
+      decoded = jwt.verify(token, jwtSecret);
+    } catch (err) {
+      return res.status(401).json({ success: false, error: "Invalid token" });
+    }
+
+    const userId = decoded.userId;
+    const { profile_image_url } = req.body;
+
+    if (!profile_image_url) {
+      return res.status(400).json({ success: false, error: "profile_image_url is required" });
+    }
+
+    // Update user profile image in Firestore
+    await db.collection("users").doc(userId).update({
+      profile_image_url,
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`Profile image updated for user ${userId}`);
+
+    res.json({
+      success: true,
+      data: { profile_image_url },
+      message: "Profile image updated successfully",
+    });
+  } catch (error) {
+    console.error("Update profile image error:", error);
+    res.status(500).json({ success: false, error: "Failed to update profile image" });
   }
 });
 

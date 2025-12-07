@@ -9,6 +9,7 @@ import {
   Copyright,
   AlertCircle,
   Loader2,
+  Image,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, spring } from "framer-motion";
@@ -16,6 +17,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../hooks/useNotification";
 import Notification from "../components/Notification";
+import api from "../services/api";
 
 function CreateAccount() {
   const [username, setUsername] = useState("");
@@ -24,9 +26,12 @@ function CreateAccount() {
   const [answer1, setAnswer1] = useState("");
   const [answer2, setAnswer2] = useState("");
   const [answer3, setAnswer3] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [errors, setErrors] = useState({});
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -70,6 +75,47 @@ function CreateAccount() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        showError("Please select a valid image file");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showError("Image size must be less than 10MB");
+        return;
+      }
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadProfileImage = async () => {
+    if (!profileImage) return null;
+    
+    try {
+      setUploadingImage(true);
+      const result = await api.uploadProfileImageToCloudinary(profileImage);
+      setUploadingImage(false);
+      
+      if (result.success) {
+        return result.data.image_url;
+      } else {
+        showError(result.error || "Failed to upload profile image");
+        return null;
+      }
+    } catch (error) {
+      setUploadingImage(false);
+      showError(error.message || "Failed to upload profile image");
+      return null;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -81,11 +127,22 @@ function CreateAccount() {
     setErrors({});
 
     try {
+      let profileImageUrl = null;
+      
+      // Upload profile image if selected
+      if (profileImage) {
+        profileImageUrl = await uploadProfileImage();
+        if (!profileImageUrl) {
+          setLoading(false);
+          return;
+        }
+      }
+
       const result = await register(username, password, {
         answer1,
         answer2,
         answer3,
-      });
+      }, profileImageUrl);
       setLoading(false);
 
       if (result.success) {
@@ -297,6 +354,48 @@ function CreateAccount() {
                         {errors.confirmPassword}
                       </div>
                     )}
+                  </div>
+
+                  <div className="profile-image-section">
+                    <div className="security-header">
+                      <Image size={18} />
+                      Profile Picture (Optional)
+                    </div>
+
+                    <div className="profile-image-upload">
+                      <input
+                        type="file"
+                        id="profileImageInput"
+                        accept="image/*"
+                        onChange={handleProfileImageChange}
+                        disabled={loading || uploadingImage}
+                        style={{ display: "none" }}
+                      />
+                      
+                      {profileImagePreview ? (
+                        <div className="profile-image-preview">
+                          <img src={profileImagePreview} alt="Profile Preview" />
+                          <button
+                            type="button"
+                            className="change-image-btn"
+                            onClick={() => document.getElementById("profileImageInput").click()}
+                            disabled={loading || uploadingImage}
+                          >
+                            Change Image
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="upload-image-btn"
+                          onClick={() => document.getElementById("profileImageInput").click()}
+                          disabled={loading || uploadingImage}
+                        >
+                          <Image size={32} />
+                          <span>Click to upload profile picture</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="security-section">

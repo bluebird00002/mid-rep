@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
   const sessionTimeoutRef = useRef(null);
   const inactivityTimeoutRef = useRef(null);
-  const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+  const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
   // Initialize session on load
   useEffect(() => {
@@ -182,6 +182,12 @@ export const AuthProvider = ({ children }) => {
       clearTimeout(inactivityTimeoutRef.current);
   };
 
+  const updateUser = (updates) => {
+    if (user) {
+      setUser({ ...user, ...updates });
+    }
+  };
+
   const extendSession = () => {
     setShowSessionExpiredModal(false);
     setLastActivity(Date.now());
@@ -202,6 +208,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        updateUser,
         loading,
         token,
         lastActivity,

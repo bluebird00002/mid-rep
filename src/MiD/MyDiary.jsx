@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, Send, Loader2, LogOut } from "lucide-react";
+import { ChevronRight, Send, Loader2, LogOut, Edit2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CommandParser from "../utils/commandParser";
 import api from "../services/api";
@@ -11,7 +11,7 @@ import "./MyDiary.css";
 import "@fontsource/jetbrains-mono";
 
 function MyDiary() {
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, loading: authLoading, updateUser } = useAuth();
   const navigate = useNavigate();
   const [command, setCommand] = useState("");
   const [history, setHistory] = useState([]);
@@ -29,9 +29,11 @@ function MyDiary() {
   const [listEditor, setListEditor] = useState(null); // { step: 'menu'|'title'|'add'|'edit'|'delete'|'tags'|'category', memory: {...}, data: {...} }
   const [timelineBuilder, setTimelineBuilder] = useState(null); // { step: 'title'|'events'|'tags'|'category', data: {...} }
   const [timelineEditor, setTimelineEditor] = useState(null); // { step: 'menu'|..., memory: {...}, data: {...} }
+  const [uploadingProfileImage, setUploadingProfileImage] = useState(false);
   const commandInputRef = useRef(null);
   const historyEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const profileImageInputRef = useRef(null);
   const welcomeShownRef = useRef(false);
 
   useEffect(() => {
@@ -2654,8 +2656,95 @@ function MyDiary() {
     commandInputRef.current?.focus();
   };
 
+  const handleProfileImageClick = () => {
+    profileImageInputRef.current?.click();
+  };
+
+  const handleProfileImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      addSystemMessage("Please select a valid image file.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      addSystemMessage("Image size must be less than 10MB.");
+      return;
+    }
+
+    setUploadingProfileImage(true);
+    try {
+      const result = await api.uploadProfileImageToCloudinary(file);
+      if (result.success) {
+        const imageUrl = result.data.image_url;
+        await api.updateProfileImage(imageUrl);
+        
+        // Update local auth context with new profile image
+        if (updateUser) {
+          updateUser({ profile_image_url: imageUrl });
+        }
+        
+        addSystemMessage("Profile image updated successfully!");
+      } else {
+        addSystemMessage(`Failed to update profile image: ${result.error}`);
+      }
+    } catch (error) {
+      addSystemMessage(`Error updating profile image: ${error.message}`);
+    } finally {
+      setUploadingProfileImage(false);
+      // Reset file input
+      if (profileImageInputRef.current) {
+        profileImageInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <div className="diary-container">
+      {/* Profile Header Section */}
+      <div className="diary-profile-header">
+        <div className="profile-card">
+          <div className="profile-image-wrapper">
+            <button
+              className="profile-image-btn"
+              onClick={handleProfileImageClick}
+              disabled={uploadingProfileImage}
+              title="Click to change profile image"
+            >
+              {user?.profile_image_url ? (
+                <img
+                  src={user.profile_image_url}
+                  alt={user.username}
+                  className="profile-image"
+                />
+              ) : (
+                <div className="profile-image-placeholder">
+                  <Edit2 size={32} />
+                </div>
+              )}
+              {uploadingProfileImage && (
+                <div className="profile-image-loading">
+                  <Loader2 size={24} className="spinner" />
+                </div>
+              )}
+            </button>
+          </div>
+          <div className="profile-info">
+            <h3 className="profile-username">{user?.username || "User"}</h3>
+            <p className="profile-status">Active</p>
+          </div>
+        </div>
+        <input
+          ref={profileImageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleProfileImageChange}
+          style={{ display: "none" }}
+        />
+      </div>
+
       <div className="diary-terminal">
         <div className="terminal-header">
           <div className="terminal-title">
