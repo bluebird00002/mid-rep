@@ -2798,7 +2798,7 @@ function MyDiary() {
                 </div>
               )}
             </button>
-            
+
             {/* Profile Menu Popup */}
             {showProfileMenu && (
               <div className="profile-menu">

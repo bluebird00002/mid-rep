@@ -9,8 +9,6 @@ import {
   Copyright,
   AlertCircle,
   Loader2,
-  Image,
-  UserCircle,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, spring } from "framer-motion";
@@ -18,7 +16,6 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../hooks/useNotification";
 import Notification from "../components/Notification";
-import ImageCropper from "../components/ImageCropper";
 import api from "../services/api";
 
 function CreateAccount() {
@@ -28,14 +25,9 @@ function CreateAccount() {
   const [answer1, setAnswer1] = useState("");
   const [answer2, setAnswer2] = useState("");
   const [answer3, setAnswer3] = useState("");
-  const [profileImage, setProfileImage] = useState(null);
-  const [profileImagePreview, setProfileImagePreview] = useState(null);
-  const [showCropper, setShowCropper] = useState(false);
-  const [tempImageFile, setTempImageFile] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [errors, setErrors] = useState({});
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -79,76 +71,6 @@ function CreateAccount() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleProfileImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        showError("Please select a valid image file");
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        showError("Image size must be less than 10MB");
-        return;
-      }
-      // Check minimum dimensions
-      const img = new Image();
-      img.onload = () => {
-        if (img.width < 200 || img.height < 200) {
-          showError("Image must be at least 200×200 pixels");
-          return;
-        }
-        setTempImageFile(file);
-        setShowCropper(true);
-      };
-      img.onerror = () => {
-        showError("Failed to load image");
-      };
-      img.src = URL.createObjectURL(file);
-    }
-  };
-
-  const handleCropComplete = (croppedBlob) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setProfileImage(croppedBlob);
-      setProfileImagePreview(e.target.result);
-      setShowCropper(false);
-      setTempImageFile(null);
-    };
-    reader.readAsDataURL(croppedBlob);
-  };
-
-  const handleCropCancel = () => {
-    setShowCropper(false);
-    setTempImageFile(null);
-  };
-
-  const handleRemoveProfileImage = () => {
-    setProfileImage(null);
-    setProfileImagePreview(null);
-  };
-
-  const uploadProfileImage = async () => {
-    if (!profileImage) return null;
-
-    try {
-      setUploadingImage(true);
-      const result = await api.uploadProfileImageToCloudinary(profileImage);
-      setUploadingImage(false);
-
-      if (result.success) {
-        return result.data.image_url;
-      } else {
-        showError(result.error || "Failed to upload profile image");
-        return null;
-      }
-    } catch (error) {
-      setUploadingImage(false);
-      showError(error.message || "Failed to upload profile image");
-      return null;
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -160,17 +82,6 @@ function CreateAccount() {
     setErrors({});
 
     try {
-      let profileImageUrl = null;
-
-      // Upload profile image if selected
-      if (profileImage) {
-        profileImageUrl = await uploadProfileImage();
-        if (!profileImageUrl) {
-          setLoading(false);
-          return;
-        }
-      }
-
       const result = await register(
         username,
         password,
@@ -179,7 +90,7 @@ function CreateAccount() {
           answer2,
           answer3,
         },
-        profileImageUrl
+        null
       );
       setLoading(false);
 
@@ -394,67 +305,6 @@ function CreateAccount() {
                     )}
                   </div>
 
-                  <div className="profile-image-section">
-                    <div className="security-header">
-                      <Image size={18} />
-                      Profile Picture (Optional)
-                    </div>
-
-                    <div className="profile-image-upload">
-                      <input
-                        type="file"
-                        id="profileImageInput"
-                        accept="image/*"
-                        onChange={handleProfileImageChange}
-                        disabled={loading || uploadingImage}
-                        style={{ display: "none" }}
-                      />
-
-                      {profileImagePreview ? (
-                        <div className="profile-image-preview">
-                          <img
-                            src={profileImagePreview}
-                            alt="Profile Preview"
-                          />
-                          <div className="profile-image-buttons">
-                            <button
-                              type="button"
-                              className="change-image-btn"
-                              onClick={() =>
-                                document
-                                  .getElementById("profileImageInput")
-                                  .click()
-                              }
-                              disabled={loading || uploadingImage}
-                            >
-                              Change Image
-                            </button>
-                            <button
-                              type="button"
-                              className="remove-image-btn"
-                              onClick={handleRemoveProfileImage}
-                              disabled={loading || uploadingImage}
-                            >
-                              Remove Picture
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="upload-image-btn"
-                          onClick={() =>
-                            document.getElementById("profileImageInput").click()
-                          }
-                          disabled={loading || uploadingImage}
-                        >
-                          <UserCircle size={40} />
-                          <span>Click to add profile picture</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
                   <div className="security-section">
                     <div className="security-header">
                       <AlertCircle size={18} />
@@ -592,13 +442,6 @@ function CreateAccount() {
                 </div>
               </form>
             </div>
-            {showCropper && tempImageFile && (
-              <ImageCropper
-                imageFile={tempImageFile}
-                onCrop={handleCropComplete}
-                onCancel={handleCropCancel}
-              />
-            )}
             <Notification
               notification={notification}
               onClose={hideNotification}

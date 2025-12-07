@@ -111,90 +111,94 @@ if (
 }
 
 // Upload image
-router.post("/", upload.fields([{ name: "file", maxCount: 1 }]), async (req, res) => {
-  try {
-    if (!req.files || !req.files.file || !req.files.file[0]) {
-      return res.status(400).json({
-        success: false,
-        error: "No image file provided",
-      });
-    }
+router.post(
+  "/",
+  upload.fields([{ name: "file", maxCount: 1 }]),
+  async (req, res) => {
+    try {
+      if (!req.files || !req.files.file || !req.files.file[0]) {
+        return res.status(400).json({
+          success: false,
+          error: "No image file provided",
+        });
+      }
 
-    const file = req.files.file[0];
-    const userId = req.user.userId;
-    const { description = "", tags = "[]", folder } = req.body;
+      const file = req.files.file[0];
+      const userId = req.user.userId;
+      const { description = "", tags = "[]", folder } = req.body;
 
-    // If this is a profile image upload, just return the URL
-    if (folder === "mid-profile-pics") {
-      return res.status(201).json({
+      // If this is a profile image upload, just return the URL
+      if (folder === "mid-profile-pics") {
+        return res.status(201).json({
+          success: true,
+          data: {
+            image_url: file.location || file.path,
+            filename: file.filename || file.public_id,
+          },
+          message: "Profile image uploaded successfully",
+        });
+      }
+
+      let tagsArray = [];
+      try {
+        tagsArray = JSON.parse(tags);
+      } catch (e) {
+        tagsArray =
+          typeof tags === "string" ? tags.split(",").map((t) => t.trim()) : [];
+      }
+
+      // Save metadata to Firestore
+      const docData = {
+        userId,
+        filename: file.filename || file.public_id || null,
+        original_name: file.originalname,
+        file_path: file.path || file.location || null,
+        description,
+        tags: tagsArray,
+        memory_id: null,
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      const docRef = await db.collection("images").add(docData);
+
+      // Update tags counts in Firestore
+      for (const tag of tagsArray) {
+        await updateTagCount(userId, tag);
+      }
+
+      res.status(201).json({
         success: true,
         data: {
-          image_url: file.location || file.path,
-          filename: file.filename || file.public_id,
+          id: docRef.id,
+          image_url: docData.file_path,
+          filename: docData.filename,
+          original_name: docData.original_name,
+          description: docData.description,
+          tags: tagsArray,
         },
-        message: "Profile image uploaded successfully",
+        message: "Image uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Upload image error:", error);
+      if (file) {
+        // If file is on disk, remove it. Cloudinary uploads are remote URLs, so skip.
+        const localPath = file.path;
+        try {
+          if (localPath && fs.existsSync(localPath)) {
+            fs.unlinkSync(localPath);
+          }
+        } catch (e) {
+          console.warn("Failed to remove local temp file:", e);
+        }
+      }
+      res.status(500).json({
+        success: false,
+        error: "Failed to upload image",
       });
     }
-
-    let tagsArray = [];
-    try {
-      tagsArray = JSON.parse(tags);
-    } catch (e) {
-      tagsArray =
-        typeof tags === "string" ? tags.split(",").map((t) => t.trim()) : [];
-    }
-
-    // Save metadata to Firestore
-    const docData = {
-      userId,
-      filename: file.filename || file.public_id || null,
-      original_name: file.originalname,
-      file_path: file.path || file.location || null,
-      description,
-      tags: tagsArray,
-      memory_id: null,
-      created_at: admin.firestore.FieldValue.serverTimestamp(),
-      updated_at: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    const docRef = await db.collection("images").add(docData);
-
-    // Update tags counts in Firestore
-    for (const tag of tagsArray) {
-      await updateTagCount(userId, tag);
-    }
-
-    res.status(201).json({
-      success: true,
-      data: {
-        id: docRef.id,
-        image_url: docData.file_path,
-        filename: docData.filename,
-        original_name: docData.original_name,
-        description: docData.description,
-        tags: tagsArray,
-      },
-      message: "Image uploaded successfully",
-    });
-  } catch (error) {
-    console.error("Upload image error:", error);
-    if (file) {
-      // If file is on disk, remove it. Cloudinary uploads are remote URLs, so skip.
-      const localPath = file.path;
-      try {
-        if (localPath && fs.existsSync(localPath)) {
-          fs.unlinkSync(localPath);
-        }
-      } catch (e) {
-        console.warn("Failed to remove local temp file:", e);
-      }
-    }
-    res.status(500).json({
-      success: false,
-      error: "Failed to upload image",
-    });
   }
-});
+);
 
 // Get all images
 router.get("/", async (req, res) => {
