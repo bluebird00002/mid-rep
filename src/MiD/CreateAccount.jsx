@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Loader2,
   Image,
+  UserCircle,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, spring } from "framer-motion";
@@ -391,8 +392,8 @@ function CreateAccount() {
                           onClick={() => document.getElementById("profileImageInput").click()}
                           disabled={loading || uploadingImage}
                         >
-                          <Image size={32} />
-                          <span>Click to upload profile picture</span>
+                          <UserCircle size={40} />
+                          <span>Click to add profile picture</span>
                         </button>
                       )}
                     </div>

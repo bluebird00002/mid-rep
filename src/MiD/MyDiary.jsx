@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, Send, Loader2, LogOut, Edit2 } from "lucide-react";
+import { ChevronRight, Send, Loader2, LogOut, Edit2, User as UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CommandParser from "../utils/commandParser";
 import api from "../services/api";
@@ -2720,8 +2720,8 @@ function MyDiary() {
                   className="profile-image"
                 />
               ) : (
-                <div className="profile-image-placeholder">
-                  <Edit2 size={32} />
+                <div className="profile-image-placeholder default-avatar">
+                  <UserIcon size={32} />
                 </div>
               )}
               {uploadingProfileImage && (
