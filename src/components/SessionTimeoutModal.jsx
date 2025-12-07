@@ -4,23 +4,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock, LogOut, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 function SessionTimeoutModal() {
   const navigate = useNavigate();
   const { showSessionExpiredModal, logout, extendSession } = useAuth();
   const [countdown, setCountdown] = useState(30);
+  const countdownTimerRef = useRef(null);
 
   useEffect(() => {
+    // Clear existing timer when modal visibility changes
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+    }
+
     if (!showSessionExpiredModal) {
       setCountdown(30);
       return;
     }
 
-    const timer = setInterval(() => {
+    // Start countdown only when modal is shown
+    countdownTimerRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
+          clearInterval(countdownTimerRef.current);
           handleLogout();
           return 0;
         }
@@ -28,7 +35,11 @@ function SessionTimeoutModal() {
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+    };
   }, [showSessionExpiredModal]);
 
   const handleLogout = () => {
@@ -37,13 +48,21 @@ function SessionTimeoutModal() {
   };
 
   const handleStayLoggedIn = () => {
+    // Stop the countdown timer immediately
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    // Reset countdown display
+    setCountdown(30);
+    // Extend the session (hide modal and reset inactivity timer)
     extendSession();
   };
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {showSessionExpiredModal && (
-        <>
+        <div key="session-modal-container" style={{ position: "fixed", inset: 0, zIndex: 9997 }}>
           {/* Backdrop */}
           <motion.div
             className="session-modal-backdrop"
@@ -51,7 +70,10 @@ function SessionTimeoutModal() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            onClick={handleLogout}
+            onClick={(e) => {
+              // Prevent backdrop click from triggering logout
+              e.preventDefault();
+            }}
           />
 
           {/* Modal */}
@@ -125,7 +147,7 @@ function SessionTimeoutModal() {
               </p>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );
