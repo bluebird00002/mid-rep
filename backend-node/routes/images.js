@@ -37,10 +37,11 @@ if (
     cloudinary: cloudinary,
     params: async (req, file) => {
       // Determine folder based on request
-      const folder = req.body?.folder || process.env.CLOUDINARY_FOLDER || "mid-uploads";
+      const folder =
+        req.body?.folder || process.env.CLOUDINARY_FOLDER || "mid-uploads";
       const ext = path.extname(file.originalname).replace(".", "");
       const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      
+
       return {
         folder: folder,
         format: ext || "jpg",
@@ -121,7 +122,7 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     const userId = req.user.userId;
     const { description = "", tags = "[]", folder } = req.body;
-    
+
     // If this is a profile image upload, just return the URL
     if (folder === "mid-profile-pics") {
       return res.status(201).json({

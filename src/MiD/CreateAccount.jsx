@@ -125,12 +125,12 @@ function CreateAccount() {
 
   const uploadProfileImage = async () => {
     if (!profileImage) return null;
-    
+
     try {
       setUploadingImage(true);
       const result = await api.uploadProfileImageToCloudinary(profileImage);
       setUploadingImage(false);
-      
+
       if (result.success) {
         return result.data.image_url;
       } else {
@@ -156,7 +156,7 @@ function CreateAccount() {
 
     try {
       let profileImageUrl = null;
-      
+
       // Upload profile image if selected
       if (profileImage) {
         profileImageUrl = await uploadProfileImage();
@@ -166,11 +166,16 @@ function CreateAccount() {
         }
       }
 
-      const result = await register(username, password, {
-        answer1,
-        answer2,
-        answer3,
-      }, profileImageUrl);
+      const result = await register(
+        username,
+        password,
+        {
+          answer1,
+          answer2,
+          answer3,
+        },
+        profileImageUrl
+      );
       setLoading(false);
 
       if (result.success) {
@@ -399,14 +404,21 @@ function CreateAccount() {
                         disabled={loading || uploadingImage}
                         style={{ display: "none" }}
                       />
-                      
+
                       {profileImagePreview ? (
                         <div className="profile-image-preview">
-                          <img src={profileImagePreview} alt="Profile Preview" />
+                          <img
+                            src={profileImagePreview}
+                            alt="Profile Preview"
+                          />
                           <button
                             type="button"
                             className="change-image-btn"
-                            onClick={() => document.getElementById("profileImageInput").click()}
+                            onClick={() =>
+                              document
+                                .getElementById("profileImageInput")
+                                .click()
+                            }
                             disabled={loading || uploadingImage}
                           >
                             Change Image
@@ -416,7 +428,9 @@ function CreateAccount() {
                         <button
                           type="button"
                           className="upload-image-btn"
-                          onClick={() => document.getElementById("profileImageInput").click()}
+                          onClick={() =>
+                            document.getElementById("profileImageInput").click()
+                          }
                           disabled={loading || uploadingImage}
                         >
                           <UserCircle size={40} />

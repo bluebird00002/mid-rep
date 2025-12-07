@@ -100,7 +100,9 @@ router.post("/register", async (req, res) => {
       created_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ User created: ${username} with security answers and profile image`);
+    console.log(
+      `✅ User created: ${username} with security answers and profile image`
+    );
 
     // Generate JWT token
     const jwtSecret =
@@ -644,7 +646,9 @@ router.get("/profile", async (req, res) => {
     }
 
     const token = authHeader.substring(7);
-    const jwtSecret = process.env.JWT_SECRET || "mid-development-secret-key-change-in-production-2024";
+    const jwtSecret =
+      process.env.JWT_SECRET ||
+      "mid-development-secret-key-change-in-production-2024";
     let decoded;
     try {
       decoded = jwt.verify(token, jwtSecret);
@@ -684,7 +688,9 @@ router.put("/profile-image", async (req, res) => {
     }
 
     const token = authHeader.substring(7);
-    const jwtSecret = process.env.JWT_SECRET || "mid-development-secret-key-change-in-production-2024";
+    const jwtSecret =
+      process.env.JWT_SECRET ||
+      "mid-development-secret-key-change-in-production-2024";
     let decoded;
     try {
       decoded = jwt.verify(token, jwtSecret);
@@ -696,7 +702,9 @@ router.put("/profile-image", async (req, res) => {
     const { profile_image_url } = req.body;
 
     if (!profile_image_url) {
-      return res.status(400).json({ success: false, error: "profile_image_url is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "profile_image_url is required" });
     }
 
     // Update user profile image in Firestore
@@ -714,7 +722,9 @@ router.put("/profile-image", async (req, res) => {
     });
   } catch (error) {
     console.error("Update profile image error:", error);
-    res.status(500).json({ success: false, error: "Failed to update profile image" });
+    res
+      .status(500)
+      .json({ success: false, error: "Failed to update profile image" });
   }
 });
 

@@ -13,7 +13,10 @@ function ImageCropper({ imageFile, onCrop, onCancel }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
-  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [imageDimensions, setImageDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
 
   // Load image
   useEffect(() => {
@@ -139,9 +142,13 @@ function ImageCropper({ imageFile, onCrop, onCancel }) {
 
   const handleCrop = () => {
     const canvas = canvasRef.current;
-    canvas.toBlob((blob) => {
-      onCrop(blob);
-    }, "image/jpeg", 0.95);
+    canvas.toBlob(
+      (blob) => {
+        onCrop(blob);
+      },
+      "image/jpeg",
+      0.95
+    );
   };
 
   return (
@@ -226,9 +233,14 @@ function ImageCropper({ imageFile, onCrop, onCancel }) {
             </div>
 
             <div className="image-info">
-              <p>Original size: {imageDimensions.width} × {imageDimensions.height}px</p>
+              <p>
+                Original size: {imageDimensions.width} ×{" "}
+                {imageDimensions.height}px
+              </p>
               <p>Minimum recommended: 200 × 200px</p>
-              <p>Current zoom: {zoom.toFixed(1)}x, Rotation: {rotation}°</p>
+              <p>
+                Current zoom: {zoom.toFixed(1)}x, Rotation: {rotation}°
+              </p>
             </div>
           </div>
         </div>

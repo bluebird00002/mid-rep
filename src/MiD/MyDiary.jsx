@@ -1,7 +1,14 @@
 import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, Send, Loader2, LogOut, Edit2, User as UserIcon } from "lucide-react";
+import {
+  ChevronRight,
+  Send,
+  Loader2,
+  LogOut,
+  Edit2,
+  User as UserIcon,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CommandParser from "../utils/commandParser";
 import api from "../services/api";
@@ -2697,19 +2704,19 @@ function MyDiary() {
   const handleProfileCropComplete = async (croppedBlob) => {
     setShowProfileCropper(false);
     setProfileCropperFile(null);
-    
+
     setUploadingProfileImage(true);
     try {
       const result = await api.uploadProfileImageToCloudinary(croppedBlob);
       if (result.success) {
         const imageUrl = result.data.image_url;
         await api.updateProfileImage(imageUrl);
-        
+
         // Update local auth context with new profile image
         if (updateUser) {
           updateUser({ profile_image_url: imageUrl });
         }
-        
+
         addSystemMessage("Profile image updated successfully!");
       } else {
         addSystemMessage(`Failed to update profile image: ${result.error}`);

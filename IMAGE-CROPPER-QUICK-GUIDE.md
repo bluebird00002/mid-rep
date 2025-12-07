@@ -1,11 +1,13 @@
 # Image Cropper - Quick Reference
 
 ## 🚀 What Was Built
+
 A professional WhatsApp/Instagram-style image cropper for profile picture selection and editing.
 
 ## 📦 What You Get
 
 ### Component: `ImageCropper.jsx`
+
 - Circular preview (400×400px)
 - Drag-to-position with mouse/touch
 - Zoom: 0.5x to 5x (slider, buttons, scroll wheel)
@@ -15,6 +17,7 @@ A professional WhatsApp/Instagram-style image cropper for profile picture select
 - Export as blob for upload
 
 ### Styling: `ImageCropper.css`
+
 - Professional modal design
 - Responsive layout (mobile/tablet/desktop)
 - Orange/gold theme matching app
@@ -24,6 +27,7 @@ A professional WhatsApp/Instagram-style image cropper for profile picture select
 ## 🔌 How to Use
 
 ### In Registration (CreateAccount)
+
 ```jsx
 // User clicks button → cropper opens → crops image → image uploads during account creation
 1. User clicks "Click to add profile picture"
@@ -33,6 +37,7 @@ A professional WhatsApp/Instagram-style image cropper for profile picture select
 ```
 
 ### In Profile Editing (MyDiary)
+
 ```jsx
 // User clicks profile image → cropper opens → crops image → image updates immediately
 1. User clicks profile image in header
@@ -44,16 +49,16 @@ A professional WhatsApp/Instagram-style image cropper for profile picture select
 
 ## 📋 User Interactions
 
-| Action | Result |
-|--------|--------|
-| **Drag** | Position image within circle |
-| **Zoom Slider** | Scale image (0.5x - 5x) |
-| **±  Buttons** | Increment/decrement zoom |
-| **Scroll Wheel** | Zoom in/out smoothly |
-| **Rotate Button** | Rotate 90° (cycles 0→90→180→270→0) |
-| **Reset Button** | Clear all transformations |
-| **Use This Picture** | Confirm crop and upload |
-| **Cancel** | Close without saving |
+| Action               | Result                             |
+| -------------------- | ---------------------------------- |
+| **Drag**             | Position image within circle       |
+| **Zoom Slider**      | Scale image (0.5x - 5x)            |
+| **± Buttons**        | Increment/decrement zoom           |
+| **Scroll Wheel**     | Zoom in/out smoothly               |
+| **Rotate Button**    | Rotate 90° (cycles 0→90→180→270→0) |
+| **Reset Button**     | Clear all transformations          |
+| **Use This Picture** | Confirm crop and upload            |
+| **Cancel**           | Close without saving               |
 
 ## ✅ Validation Built In
 
@@ -92,12 +97,14 @@ src/
 ## 🔄 Integration Points
 
 1. **CreateAccount.jsx**
+
    - Imports ImageCropper
    - State: `showCropper`, `tempImageFile`, `uploadingImage`
    - Functions: `handleProfileImageChange()`, `handleCropComplete()`, `handleCropCancel()`
    - Shows cropper instead of direct preview
 
 2. **MyDiary.jsx**
+
    - Imports ImageCropper
    - State: `showProfileCropper`, `profileCropperFile`
    - Functions: `handleProfileImageChange()`, `handleProfileCropComplete()`, `handleProfileCropCancel()`
@@ -111,28 +118,36 @@ src/
 ## 🎨 Customization
 
 ### Change Crop Size
+
 Edit in `ImageCropper.jsx`:
+
 ```jsx
 const CANVAS_SIZE = 400; // Change to desired size
 ```
 
 ### Change Zoom Range
+
 Edit in `ImageCropper.jsx`:
+
 ```jsx
-const MIN_ZOOM = 0.5;   // Minimum zoom
-const MAX_ZOOM = 5;     // Maximum zoom
+const MIN_ZOOM = 0.5; // Minimum zoom
+const MAX_ZOOM = 5; // Maximum zoom
 ```
 
 ### Change Theme Color
+
 Edit in `ImageCropper.css`:
+
 ```css
 rgba(255,166,0) /* Orange/gold - search and replace */
 ```
 
 ### Change Rotation Step
+
 Edit in `ImageCropper.jsx`:
+
 ```jsx
-rotation: (rotation + 90) % 360  /* 90 = 90° increments */
+rotation: (rotation + 90) % 360; /* 90 = 90° increments */
 ```
 
 ## 🧪 Testing Quick Checklist
@@ -195,23 +210,27 @@ Users see these in the terminal when there's an issue:
 ## 🆘 Troubleshooting
 
 **Cropper doesn't appear?**
+
 - Check file type (must be image)
 - Check file size (<10MB)
 - Check image dimensions (≥200×200px)
 
 **Image doesn't upload after crop?**
+
 - Check browser console for errors
 - Verify Cloudinary credentials configured
 - Check network connection
 - Look for error message in terminal
 
 **Zoom or drag not working?**
+
 - Try different browser/device
 - Check for JavaScript errors in console
 - Clear browser cache
 - Try smaller image file
 
 **Image looks pixelated?**
+
 - Original image resolution too low
 - Zoom level too high (max 5x)
 - Try larger source image
