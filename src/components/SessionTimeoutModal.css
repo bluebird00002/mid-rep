@@ -1,26 +1,26 @@
 .session-modal-backdrop {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(26, 26, 46, 0.7) 100%);
     backdrop-filter: blur(8px);
     z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px; /* keep some space on small screens */
 }
 
 .session-timeout-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: relative; /* positioned inside backdrop flexbox */
     z-index: 9999;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     border: 2px solid #ba7104;
     border-radius: 16px;
     padding: 40px;
-    max-width: 500px;
-    width: 90%;
+    max-width: 600px;
+    width: 100%;
+    max-height: calc(100vh - 80px);
+    overflow: auto; /* allow scrolling if viewport is small */
     box-shadow:
         0 20px 60px rgba(0, 0, 0, 0.6),
         0 0 40px rgba(186, 113, 4, 0.3),
