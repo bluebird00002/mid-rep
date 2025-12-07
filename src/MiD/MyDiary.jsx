@@ -2746,12 +2746,12 @@ function MyDiary() {
     try {
       // Update profile to remove image URL
       await api.updateProfileImage(null);
-      
+
       // Update local auth context with removed image
       if (updateUser) {
         updateUser({ profile_image_url: null });
       }
-      
+
       addSystemMessage("Profile picture removed successfully!");
     } catch (error) {
       addSystemMessage(`Error removing profile picture: ${error.message}`);

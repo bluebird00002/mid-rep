@@ -108,19 +108,19 @@ app.use((req, res, next) => {
 
 // Health check endpoint (for Render deployment monitoring)
 app.get("/health", (req, res) => {
-  res.status(200).json({ 
-    status: "ok", 
+  res.status(200).json({
+    status: "ok",
     message: "MiD API is healthy and ready",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Root endpoint (for deployment verification)
 app.get("/", (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     message: "MiD API Server",
     version: "1.0.0",
-    status: "running"
+    status: "running",
   });
 });
 
