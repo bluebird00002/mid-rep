@@ -8,6 +8,7 @@ import {
   LogOut,
   Edit2,
   User as UserIcon,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CommandParser from "../utils/commandParser";
@@ -2741,6 +2742,22 @@ function MyDiary() {
     }
   };
 
+  const handleRemoveProfileImage = async () => {
+    try {
+      // Update profile to remove image URL
+      await api.updateProfileImage(null);
+      
+      // Update local auth context with removed image
+      if (updateUser) {
+        updateUser({ profile_image_url: null });
+      }
+      
+      addSystemMessage("Profile picture removed successfully!");
+    } catch (error) {
+      addSystemMessage(`Error removing profile picture: ${error.message}`);
+    }
+  };
+
   return (
     <div className="diary-container">
       <SessionTimeoutModal />
@@ -2771,6 +2788,16 @@ function MyDiary() {
                 </div>
               )}
             </button>
+            {user?.profile_image_url && (
+              <button
+                className="profile-image-remove-btn"
+                onClick={handleRemoveProfileImage}
+                disabled={uploadingProfileImage}
+                title="Remove profile image"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
           <div className="profile-info">
             <h3 className="profile-username">{user?.username || "User"}</h3>

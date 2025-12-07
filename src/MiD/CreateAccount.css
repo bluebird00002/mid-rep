@@ -815,6 +815,41 @@
     cursor: not-allowed;
 }
 
+.profile-image-buttons {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+}
+
+.profile-image-buttons button {
+    flex: 1;
+    max-width: 150px;
+}
+
+.remove-image-btn {
+    padding: 8px 16px;
+    background: rgba(244, 67, 54, 0.2);
+    border: 1px solid rgba(244, 67, 54, 0.5);
+    border-radius: 4px;
+    color: rgba(244, 67, 54, 0.8);
+    font-family: "JetBrains Mono", "Courier New", monospace;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.remove-image-btn:hover:not(:disabled) {
+    background: rgba(244, 67, 54, 0.3);
+    border-color: rgba(244, 67, 54, 0.7);
+    color: rgba(244, 67, 54, 1);
+}
+
+.remove-image-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 @media (max-width: 700px) {
     .upload-image-btn {
         padding: 16px;

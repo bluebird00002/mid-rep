@@ -123,6 +123,11 @@ function CreateAccount() {
     setTempImageFile(null);
   };
 
+  const handleRemoveProfileImage = () => {
+    setProfileImage(null);
+    setProfileImagePreview(null);
+  };
+
   const uploadProfileImage = async () => {
     if (!profileImage) return null;
 
@@ -411,18 +416,28 @@ function CreateAccount() {
                             src={profileImagePreview}
                             alt="Profile Preview"
                           />
-                          <button
-                            type="button"
-                            className="change-image-btn"
-                            onClick={() =>
-                              document
-                                .getElementById("profileImageInput")
-                                .click()
-                            }
-                            disabled={loading || uploadingImage}
-                          >
-                            Change Image
-                          </button>
+                          <div className="profile-image-buttons">
+                            <button
+                              type="button"
+                              className="change-image-btn"
+                              onClick={() =>
+                                document
+                                  .getElementById("profileImageInput")
+                                  .click()
+                              }
+                              disabled={loading || uploadingImage}
+                            >
+                              Change Image
+                            </button>
+                            <button
+                              type="button"
+                              className="remove-image-btn"
+                              onClick={handleRemoveProfileImage}
+                              disabled={loading || uploadingImage}
+                            >
+                              Remove Picture
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <button
