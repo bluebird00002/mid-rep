@@ -228,13 +228,46 @@ router.get("/", async (req, res) => {
       updated_at: formatTimestamp(img.updated_at),
     }));
 
-    // Filter by tags if provided
+    // Filter by tags if provided (accept comma-separated or repeated query params)
     let filteredImages = formattedImages;
     if (tags) {
-      const tagArray = tags.split(",");
-      filteredImages = formattedImages.filter((img) =>
-        tagArray.some((tag) => img.tags.includes(tag.trim()))
-      );
+      let tagArray = [];
+      if (Array.isArray(tags)) {
+        tagArray = tags.flatMap((t) => String(t).split(",")).map((t) => t.trim());
+      } else {
+        tagArray = String(tags).split(",").map((t) => t.trim());
+      }
+      tagArray = tagArray.filter(Boolean);
+      if (tagArray.length) {
+        filteredImages = formattedImages.filter((img) =>
+          (img.tags || []).some((tag) => tagArray.includes(String(tag).trim()))
+        );
+      }
+    }
+
+    // Filter by category if provided.
+    // Images may store a `category` field; if not, some images are linked to memories via `memory_id`.
+    if (req.query.category) {
+      const category = req.query.category;
+      // If images have an explicit category field, use it; otherwise resolve via linked memories
+      const anyHasCategory = filteredImages.some((img) => img.category !== undefined && img.category !== null);
+      if (anyHasCategory) {
+        filteredImages = filteredImages.filter((img) => img.category === category);
+      } else {
+        // Resolve memory ids that match the category for this user
+        try {
+          const memSnap = await db.collection('memories')
+            .where('user_id', '==', userId)
+            .where('category', '==', category)
+            .get();
+          const memIds = new Set(memSnap.docs.map((d) => d.id));
+          filteredImages = filteredImages.filter((img) => img.memory_id && memIds.has(img.memory_id));
+        } catch (err) {
+          console.warn('Failed to resolve image categories via memories:', err);
+          // fallback: filter none
+          filteredImages = [];
+        }
+      }
     }
 
     res.json({
