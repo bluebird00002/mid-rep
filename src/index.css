@@ -321,7 +321,8 @@ a {
         position: relative;
         padding: 0;
         width: 100%;
-        gap: 12px;
+        gap: 20px;
+        /* more breathing room between elements on small screens */
     }
 
     .clock-container {
@@ -329,9 +330,12 @@ a {
         bottom: auto;
         right: auto;
         margin: 0 auto;
-        padding: 6px 0; /* reduced padding, remove framed look */
-        background: transparent; /* remove background on mobile as requested */
-        border: none; /* remove border */
+        padding: 6px 0;
+        /* reduced padding, remove framed look */
+        background: transparent;
+        /* remove background on mobile as requested */
+        border: none;
+        /* remove border */
         border-radius: 0;
         backdrop-filter: none;
         box-shadow: none;
@@ -341,28 +345,32 @@ a {
     }
 
     .clock-container>div {
-        font-size: 3.6rem; /* slightly larger on phones */
+        font-size: 3.6rem;
+        /* slightly larger on phones */
         font-weight: 800;
         font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        margin: 0;
+        margin: 0 0 6px 0;
         animation: none;
-        background: linear-gradient(180deg, #c9ccd0 0%, #050505 85%); /* stronger metallic grey->black */
+        /* Softer gradient: reduce area of pure black so it fades more gently */
+        background: linear-gradient(180deg, #d6d8da 0%, #2b2b2b 70%, #0b0b0b 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 12px 28px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255, 255, 255, 0.02);
+        text-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.02);
     }
 
     .formated-day {
         display: block;
-        font-size: 3.6rem; /* larger on phones */
+        font-size: 3.8rem;
+        /* slightly larger on phones */
         font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        background: linear-gradient(180deg, #e0e3e6 0%, #020202 85%); /* improved metallic gradient */
+        /* Softer metallic gradient so black is less dominant */
+        background: linear-gradient(180deg, #e8eaec 0%, #3a3a3a 65%, #0b0b0b 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 10px 26px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255, 255, 255, 0.02);
-        margin: 0;
+        text-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
+        margin: 0 0 8px 0;
         letter-spacing: 1px;
     }
 
@@ -371,9 +379,11 @@ a {
         position: relative;
         bottom: auto;
         right: auto;
-        font-size: 1.1rem; /* slightly larger */
+        font-size: 1.15rem;
+        /* slightly larger */
         color: #c7cace;
-        margin: 8px 0 0 0;
+        margin: 10px 0 0 0;
+        /* increase top margin so it doesn't touch other elements */
         letter-spacing: 1px;
         text-transform: uppercase;
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
@@ -387,9 +397,11 @@ a {
         bottom: auto;
         left: auto;
         transform: none;
-        font-size: 1.1rem; /* slightly larger */
+        font-size: 1.15rem;
+        /* slightly larger */
         color: #c7cace;
-        margin: 4px 0 0 0;
+        margin: 10px 0 0 0;
+        /* increased spacing */
         letter-spacing: 1px;
         text-transform: uppercase;
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
