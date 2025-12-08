@@ -131,15 +131,14 @@ a {
     width: fit-content;
     height: fit-content;
     margin: 0;
-    color: #b6b2b2;
-    -webkit-text-stroke: #cfcaca3c;
-    -webkit-text-stroke-width: 1px;
+    color: #9ca3af;
     font-size: larger;
     position: absolute;
     bottom: 32%;
     right: 55%;
-    border-bottom: 2px solid #b6b2b2;
-    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(156,163,175,0.18);
+    padding-bottom: 10px;
+    text-align: left;
 }
 
 
@@ -152,33 +151,36 @@ a {
 
 .formated-day {
     font-size: 21rem;
-    background: linear-gradient(to bottom, #c1bebe, #00000047 85%);
-    background-clip: text;
+    font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(180deg, #9ca3af 0%, #0b0b0b 85%);
+    -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.03);
 }
 
 
 .formatted-month {
-    color: #f3ecec;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     font-size: 4rem;
     position: absolute;
-    color: #b6b2b2;
-    -webkit-text-stroke: #cfcaca3c;
-    -webkit-text-stroke-width: 1px;
+    color: #9ca3af;
     bottom: 40%;
     right: -12%;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.95;
 }
 
 
 .formatted-week-day {
-    color: #b6b2b2;
-    -webkit-text-stroke: #cfcaca3c;
-    -webkit-text-stroke-width: 1px;
+    color: #9ca3af;
     transform: rotate(-90deg);
     position: absolute;
     bottom: 43%;
     left: -10%;
     font-size: 4rem;
+    opacity: 0.9;
 }
 
 

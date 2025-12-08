@@ -31,7 +31,8 @@ function LandingPage() {
 
   const hour = time.getHours().toString().padStart(2, "0");
   const minutes = time.getMinutes().toString().padStart(2, "0");
-  const formatedDay = time.getDay().toString().padStart(2, "0");
+  // day of month (getDate) — getDay returns weekday index (0-6)
+  const formatedDay = time.getDate().toString().padStart(2, "0");
   const formatedMonth = time.toLocaleDateString("en-US", {
     month: "long",
   });
