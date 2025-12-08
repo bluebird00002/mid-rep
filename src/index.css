@@ -329,39 +329,39 @@ a {
         bottom: auto;
         right: auto;
         margin: 0 auto;
-        padding: 20px 30px;
-        background: linear-gradient(135deg, rgba(255, 166, 0, 0.08), rgba(255, 166, 0, 0.02));
-        border: 1px solid rgba(255, 166, 0, 0.15);
-        border-radius: 12px;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 6px 0; /* reduced padding, remove framed look */
+        background: transparent; /* remove background on mobile as requested */
+        border: none; /* remove border */
+        border-radius: 0;
+        backdrop-filter: none;
+        box-shadow: none;
         width: fit-content;
         text-align: center;
-        animation: smoothClockPulse 4s ease-in-out infinite;
+        animation: none;
     }
 
     .clock-container>div {
-        font-size: 2.8rem;
+        font-size: 3.6rem; /* slightly larger on phones */
         font-weight: 800;
         font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         margin: 0;
         animation: none;
-        background: linear-gradient(180deg, #9ca3af 0%, #0b0b0b 85%);
+        background: linear-gradient(180deg, #c9ccd0 0%, #050505 85%); /* stronger metallic grey->black */
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.03);
+        text-shadow: 0 12px 28px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255, 255, 255, 0.02);
     }
 
     .formated-day {
         display: block;
-        font-size: 2.2rem;
+        font-size: 3.6rem; /* larger on phones */
         font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        background: linear-gradient(180deg, #9ca3af 0%, #0b0b0b 85%);
+        background: linear-gradient(180deg, #e0e3e6 0%, #020202 85%); /* improved metallic gradient */
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.03);
+        text-shadow: 0 10px 26px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255, 255, 255, 0.02);
         margin: 0;
         letter-spacing: 1px;
     }
@@ -371,14 +371,14 @@ a {
         position: relative;
         bottom: auto;
         right: auto;
-        font-size: 0.85rem;
-        color: #9ca3af;
+        font-size: 1.1rem; /* slightly larger */
+        color: #c7cace;
         margin: 8px 0 0 0;
         letter-spacing: 1px;
         text-transform: uppercase;
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        font-weight: 500;
-        opacity: 0.95;
+        font-weight: 600;
+        opacity: 0.98;
     }
 
     .formatted-week-day {
@@ -387,14 +387,14 @@ a {
         bottom: auto;
         left: auto;
         transform: none;
-        font-size: 0.85rem;
-        color: #9ca3af;
+        font-size: 1.1rem; /* slightly larger */
+        color: #c7cace;
         margin: 4px 0 0 0;
         letter-spacing: 1px;
         text-transform: uppercase;
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        font-weight: 500;
-        opacity: 0.95;
+        font-weight: 600;
+        opacity: 0.98;
     }
 
     .bottom-icons {
