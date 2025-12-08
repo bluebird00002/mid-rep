@@ -151,12 +151,26 @@ a {
 
 .formated-day {
     font-size: 21rem;
-    font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(180deg, #9ca3af 0%, #0b0b0b 85%);
+    /* Use same font stack as the month for consistency */
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    /* Black -> dark orange to match landing background */
+    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     text-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* Apply matching gradient to the clock time text (hours:minutes) on desktop */
+.clock-container>div {
+    font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 800;
+    font-size: 3.2rem;
+    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 
@@ -352,7 +366,8 @@ a {
         margin: 0 0 6px 0;
         animation: none;
         /* Softer gradient: reduce area of pure black so it fades more gently */
-        background: linear-gradient(180deg, #d6d8da 0%, #2b2b2b 70%, #0b0b0b 100%);
+        /* Mobile: softer black -> dark orange gradient */
+        background: linear-gradient(180deg, #2b2b2b 0%, #0b0b0b 50%, #7b5204 95%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -363,9 +378,10 @@ a {
         display: block;
         font-size: 3.8rem;
         /* slightly larger on phones */
-        font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        /* Softer metallic gradient so black is less dominant */
-        background: linear-gradient(180deg, #e8eaec 0%, #3a3a3a 65%, #0b0b0b 100%);
+        /* Match the month font family for consistency on mobile */
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        /* Mobile: black -> dark orange, softened for small screens */
+        background: linear-gradient(180deg, #2b2b2b 0%, #0b0b0b 55%, #7b5204 95%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
