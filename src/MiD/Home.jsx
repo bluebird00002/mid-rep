@@ -240,29 +240,9 @@ function Home() {
         </div>
         <div className="home-login-rows ver-space"></div>
         <div className="home-login-rows">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 2.4, ease: "easeOut" }}
-            className="powered-by-animation"
-          >
-            <motion.div
-              initial={{ opacity: 1 }}
-              animate={{
-                opacity: 1,
-                x: [window.innerWidth + 500, -window.innerWidth - 500],
-              }}
-              transition={{ duration: 50, repeat: Infinity, delay: 1.2 }}
-              className="animate-p1"
-            >
-              M<span className="app-name-i">i</span>D is created and powered by{" "}
-              <span className="company-name">BluCia Labs</span> Tech Family.{" "}
-              <span className="all-rights-reserved">
-                <Copyright size={16} />
-                2025 All Rights Reserved
-              </span>
-            </motion.div>
-          </motion.div>
+          <div className="watermark-footer" aria-hidden="true">
+            Powered by <span className="company-name">BluCia Labs</span>
+          </div>
         </div>
       </div>
     </>

@@ -777,3 +777,33 @@ body::-webkit-scrollbar-thumb {
     color: #ffb84d;
     font-size: 0.9em;
 }
+
+/* ============ STATIC WATERMARK (LOGIN PAGE) ============ */
+.watermark-footer {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.95rem;
+    color: rgba(255, 166, 0, 0.12);
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 1px;
+    z-index: 9999;
+    font-family: 'Orbitron', 'JetBrains Mono', sans-serif;
+}
+
+.watermark-footer .company-name {
+    color: rgba(255, 166, 0, 0.18);
+    background: none;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: unset;
+    font-weight: 700;
+}
+
+@media (max-width: 600px) {
+    .watermark-footer {
+        font-size: 0.85rem;
+        bottom: 8px;
+    }
+}
