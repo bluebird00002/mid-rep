@@ -342,22 +342,28 @@ a {
 
     .clock-container>div {
         font-size: 2.8rem;
-        font-weight: 600;
-        color: #ffa500;
-        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        letter-spacing: 2px;
+        font-weight: 800;
+        font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         margin: 0;
         animation: none;
+        background: linear-gradient(180deg, #9ca3af 0%, #0b0b0b 85%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 10px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.03);
     }
 
     .formated-day {
         display: block;
         font-size: 2.2rem;
-        font-weight: 600;
-        color: #ffa500;
+        font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(180deg, #9ca3af 0%, #0b0b0b 85%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 8px 20px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.03);
         margin: 0;
         letter-spacing: 1px;
-        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     }
 
     .formatted-month {
@@ -366,12 +372,13 @@ a {
         bottom: auto;
         right: auto;
         font-size: 0.85rem;
-        color: #b6b2b2;
+        color: #9ca3af;
         margin: 8px 0 0 0;
         letter-spacing: 1px;
         text-transform: uppercase;
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         font-weight: 500;
+        opacity: 0.95;
     }
 
     .formatted-week-day {
@@ -381,12 +388,13 @@ a {
         left: auto;
         transform: none;
         font-size: 0.85rem;
-        color: #b6b2b2;
+        color: #9ca3af;
         margin: 4px 0 0 0;
         letter-spacing: 1px;
         text-transform: uppercase;
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         font-weight: 500;
+        opacity: 0.95;
     }
 
     .bottom-icons {
@@ -430,3 +438,6 @@ a {
         height: 16px;
     }
 }
+
+/* Import Orbitron for the clock display (fallbacks provided) */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
