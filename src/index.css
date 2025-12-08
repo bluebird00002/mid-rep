@@ -163,22 +163,29 @@ a {
 
 /* Apply matching gradient to the clock time text (hours:minutes) on desktop */
 .clock-container>div {
-    font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 800;
-    font-size: 3.2rem;
+    /* Match date: font, weight, and gradient for Rainmeter-like look */
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 900;
+    font-size: 6rem;
+    /* larger so time is highly visible */
     background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
+    text-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 
 .formatted-month {
+    /* Use same visual treatment as date for cohesion */
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     font-size: 4rem;
     position: absolute;
-    color: #9ca3af;
+    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 10px 22px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
     bottom: 40%;
     right: -12%;
     text-transform: uppercase;
@@ -188,13 +195,19 @@ a {
 
 
 .formatted-week-day {
-    color: #9ca3af;
+    /* Match date gradient and font feel; rotated label stays */
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     transform: rotate(-90deg);
     position: absolute;
     bottom: 43%;
     left: -10%;
     font-size: 4rem;
-    opacity: 0.9;
+    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 10px 22px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
+    opacity: 0.95;
 }
 
 
