@@ -136,7 +136,7 @@ a {
     position: absolute;
     bottom: 32%;
     right: 55%;
-    border-bottom: 2px solid rgba(156,163,175,0.18);
+    border-bottom: 2px solid rgba(156, 163, 175, 0.18);
     padding-bottom: 10px;
     text-align: left;
 }
@@ -156,7 +156,7 @@ a {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.03);
+    text-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 
@@ -350,7 +350,7 @@ a {
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 10px 24px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.03);
+        text-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.03);
     }
 
     .formated-day {
@@ -361,7 +361,7 @@ a {
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 8px 20px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.03);
+        text-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.03);
         margin: 0;
         letter-spacing: 1px;
     }
