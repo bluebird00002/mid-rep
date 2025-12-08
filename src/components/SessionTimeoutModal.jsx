@@ -12,6 +12,12 @@ function SessionTimeoutModal() {
   const [countdown, setCountdown] = useState(30);
   const countdownTimerRef = useRef(null);
 
+  const formatTime = (s) => {
+    const mm = Math.floor(s / 60);
+    const ss = s % 60;
+    return `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  };
+
   useEffect(() => {
     // Clear existing timer when modal visibility changes
     if (countdownTimerRef.current) {
@@ -62,7 +68,10 @@ function SessionTimeoutModal() {
   return (
     <AnimatePresence mode="wait">
       {showSessionExpiredModal && (
-        <div key="session-modal-container" style={{ position: "fixed", inset: 0, zIndex: 9997 }}>
+        <div
+          key="session-modal-container"
+          style={{ position: "fixed", inset: 0, zIndex: 9997 }}
+        >
           {/* Backdrop */}
           <motion.div
             className="session-modal-backdrop"
@@ -103,17 +112,23 @@ function SessionTimeoutModal() {
               {/* Content */}
               <div className="modal-content">
                 <p className="session-message">
-                  Your session has been inactive for 5 minutes. You will be logged out for security.
+                  Your session has been inactive for 5 minutes. You will be
+                  logged out for security.
                 </p>
 
                 {/* Countdown */}
                 <motion.div
                   className="countdown-container"
                   animate={{ scale: countdown <= 10 ? [1, 1.05, 1] : 1 }}
-                  transition={{ duration: 0.6, repeat: countdown <= 10 ? Infinity : 0 }}
+                  transition={{
+                    duration: 0.6,
+                    repeat: countdown <= 10 ? Infinity : 0,
+                  }}
                 >
                   <span className="countdown-label">Logging out in</span>
-                  <span className="countdown-number">{countdown}s</span>
+                  <span className="countdown-number">
+                    {formatTime(countdown)}
+                  </span>
                 </motion.div>
               </div>
 
@@ -142,8 +157,11 @@ function SessionTimeoutModal() {
 
               {/* Footer */}
               <p className="modal-footer">
-                <Clock size={12} />
-                Auto logout in {countdown} seconds
+                <Clock size={14} className="footer-clock-icon" />
+                <span className="footer-text">
+                  Auto logout in{" "}
+                  <span className="footer-time">{formatTime(countdown)}</span>
+                </span>
               </p>
             </div>
           </motion.div>
@@ -154,4 +172,3 @@ function SessionTimeoutModal() {
 }
 
 export default SessionTimeoutModal;
-
