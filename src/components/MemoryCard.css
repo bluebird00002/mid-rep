@@ -7,6 +7,9 @@
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   color: #ffa600;
   transition: all 0.3s ease;
+  /* Ensure grid items don't stretch to equal heights - fit to content */
+  align-self: start;
+  height: fit-content;
 }
 
 .memory-card:hover {
