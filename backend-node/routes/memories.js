@@ -201,16 +201,24 @@ router.post("/", async (req, res) => {
         error: "Content is required for text memories",
       });
 
+    // Sanitize fields that may contain nested arrays before saving
+    const safeColumns =
+      columns !== undefined ? sanitizeForFirestore(columns) : null;
+    const safeRows = rows !== undefined ? sanitizeForFirestore(rows) : null;
+    const safeItems = items !== undefined ? sanitizeForFirestore(items) : null;
+    const safeEvents =
+      events !== undefined ? sanitizeForFirestore(events) : null;
+
     const docRef = await db.collection("memories").add({
       user_id: userId,
       type,
       content: content || null,
       category: category || null,
       tags: tagsArray,
-      columns: columns || null,
-      rows: rows || null,
-      items: items || null,
-      events: events || null,
+      columns: safeColumns,
+      rows: safeRows,
+      items: safeItems,
+      events: safeEvents,
       description: description || null,
       image_url: image_url || null,
       created_at: admin.firestore.FieldValue.serverTimestamp(),
@@ -279,19 +287,19 @@ router.put("/:id", async (req, res) => {
     }
 
     if (updates.columns !== undefined) {
-      updateData.columns = updates.columns;
+      updateData.columns = sanitizeForFirestore(updates.columns);
     }
 
     if (updates.rows !== undefined) {
-      updateData.rows = updates.rows;
+      updateData.rows = sanitizeForFirestore(updates.rows);
     }
 
     if (updates.items !== undefined) {
-      updateData.items = updates.items;
+      updateData.items = sanitizeForFirestore(updates.items);
     }
 
     if (updates.events !== undefined) {
-      updateData.events = updates.events;
+      updateData.events = sanitizeForFirestore(updates.events);
     }
 
     if (updates.add) {
@@ -448,16 +456,73 @@ function formatMemory(doc) {
     content: data.content,
     category: data.category,
     tags: data.tags || [],
-    columns: data.columns || null,
-    rows: data.rows || null,
-    items: data.items || null,
-    events: data.events || null,
+    columns: data.columns ? restoreFromFirestore(data.columns) : null,
+    rows: data.rows ? restoreFromFirestore(data.rows) : null,
+    items: data.items ? restoreFromFirestore(data.items) : null,
+    events: data.events ? restoreFromFirestore(data.events) : null,
     description: data.description,
     image_url: data.image_url,
     has_image: !!data.image_url,
     created_at,
     updated_at,
   };
+}
+
+// Sanitize payload before writing to Firestore: replace any direct array elements
+// that are arrays (nested arrays) with an object wrapper so top-level arrays
+// do not contain arrays directly. Firestore disallows arrays containing arrays.
+function sanitizeForFirestore(value) {
+  if (Array.isArray(value)) {
+    return value.map((el) => {
+      if (Array.isArray(el)) {
+        // replace nested array element with an object wrapper
+        return { cells: el };
+      } else if (el && typeof el === "object") {
+        return sanitizeForFirestore(el);
+      }
+      return el;
+    });
+  }
+
+  if (value && typeof value === "object") {
+    const out = Array.isArray(value) ? [] : {};
+    for (const k of Object.keys(value)) {
+      out[k] = sanitizeForFirestore(value[k]);
+    }
+    return out;
+  }
+
+  return value;
+}
+
+// Restore wrapper objects back to plain nested arrays when reading from Firestore
+// so the frontend continues to receive the original shapes.
+function restoreFromFirestore(value) {
+  if (Array.isArray(value)) {
+    return value.map((el) => {
+      if (
+        el &&
+        typeof el === "object" &&
+        Object.keys(el).length === 1 &&
+        Array.isArray(el.cells)
+      ) {
+        return el.cells;
+      } else if (el && typeof el === "object") {
+        return restoreFromFirestore(el);
+      }
+      return el;
+    });
+  }
+
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const k of Object.keys(value)) {
+      out[k] = restoreFromFirestore(value[k]);
+    }
+    return out;
+  }
+
+  return value;
 }
 
 async function updateCategoryCount(userId, category) {
