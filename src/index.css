@@ -134,8 +134,8 @@ a {
     color: #9ca3af;
     font-size: larger;
     position: absolute;
-    bottom: 32%;
-    right: 55%;
+    left: 40%;
+    top: 60%;
     border-bottom: 2px solid rgba(156, 163, 175, 0.18);
     padding-bottom: 10px;
     text-align: left;
@@ -166,13 +166,15 @@ a {
     /* Match date: font, weight, and gradient for Rainmeter-like look */
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 900;
-    font-size: 6rem;
+    font-size: 1.5rem;
     /* larger so time is highly visible */
-    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
+    background: linear-gradient(180deg, #575656 0%, #614002 85%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.03);
+    text-shadow: 0 12px 28px rgba(30, 29, 29, 0.6), 0 1px 0 rgba(214, 212, 212, 0.185);
+
+
 }
 
 
@@ -181,7 +183,7 @@ a {
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     font-size: 4rem;
     position: absolute;
-    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
+    background: linear-gradient(180deg, #575656 0%, #614002 85%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -202,7 +204,7 @@ a {
     bottom: 43%;
     left: -10%;
     font-size: 4rem;
-    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
+    background: linear-gradient(180deg, #575656 0%, #614002 85%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -338,6 +340,7 @@ a {
     .clock-icon-mob {
         display: block;
         color: #ffffffcd;
+
     }
 
     .day-container {
@@ -367,23 +370,27 @@ a {
         backdrop-filter: none;
         box-shadow: none;
         width: fit-content;
-        text-align: center;
+
         animation: none;
     }
 
     .clock-container>div {
+        position: relative;
+        text-align: center;
         font-size: 3.6rem;
         /* slightly larger on phones */
         font-weight: 800;
-        font-family: 'Orbitron', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        margin: 0 0 6px 0;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+
+        text-wrap: nowrap;
         animation: none;
         /* Softer gradient: reduce area of pure black so it fades more gently */
         /* Mobile: softer black -> dark orange gradient */
-        background: linear-gradient(180deg, #2b2b2b 0%, #0b0b0b 50%, #7b5204 95%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
         background-clip: text;
+
+        -webkit-text-fill-color: transparent;
+
         text-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.02);
     }
 
@@ -394,7 +401,7 @@ a {
         /* Match the month font family for consistency on mobile */
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         /* Mobile: black -> dark orange, softened for small screens */
-        background: linear-gradient(180deg, #2b2b2b 0%, #0b0b0b 55%, #7b5204 95%);
+        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -404,10 +411,14 @@ a {
     }
 
     .formatted-month {
+        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
+        background-clip: text;
+
         display: block;
         position: relative;
         bottom: auto;
         right: auto;
+
         font-size: 1.15rem;
         /* slightly larger */
         color: #c7cace;
@@ -418,6 +429,7 @@ a {
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         font-weight: 600;
         opacity: 0.98;
+
     }
 
     .formatted-week-day {

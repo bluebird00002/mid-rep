@@ -88,6 +88,7 @@ function LandingPage() {
                         type: easeIn,
                         delay: 5.5,
                       }}
+                      className="clock-time"
                     >
                       {hour} : {minutes}
                     </motion.div>
