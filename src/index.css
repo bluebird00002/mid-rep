@@ -356,11 +356,10 @@ a {
     }
 
     .clock-container {
-        position: relative;
-        bottom: auto;
-        right: auto;
-        margin: 0 auto;
-        padding: 6px 0;
+        position: absolute;
+        top: -10vh;
+        left: -10vw;
+
         /* reduced padding, remove framed look */
         background: transparent;
         /* remove background on mobile as requested */
@@ -370,13 +369,15 @@ a {
         backdrop-filter: none;
         box-shadow: none;
         width: fit-content;
-
         animation: none;
+
     }
+
 
     .clock-container>div {
         position: relative;
-        text-align: center;
+
+
         font-size: 3.6rem;
         /* slightly larger on phones */
         font-weight: 800;
@@ -448,6 +449,9 @@ a {
         font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         font-weight: 600;
         opacity: 0.98;
+
+        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
+        background-clip: text;
     }
 
     .bottom-icons {
