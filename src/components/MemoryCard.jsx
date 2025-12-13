@@ -162,11 +162,39 @@ function MemoryCard({ memory, onEdit, onDelete }) {
     }
   };
 
+  // Determine whether this memory should span the full grid width
+  const isLongMemory = () => {
+    try {
+      const threshold = 300; // characters
+      if (!memory) return false;
+      if (memory.type === "image") return false;
+
+      // Calculate approximate content size
+      let size = 0;
+      if (typeof memory.content === "string") size += memory.content.length;
+      if (memory.type === "list" && Array.isArray(memory.items))
+        size += memory.items.join(" ").length;
+      if (memory.type === "table") {
+        if (Array.isArray(memory.columns)) size += memory.columns.join(" ").length;
+        if (Array.isArray(memory.rows))
+          size += memory.rows.map((r) => (Array.isArray(r) ? r.join(" ") : String(r))).join(" ").length;
+      }
+      if (memory.type === "timeline" && Array.isArray(memory.events))
+        size += memory.events.map((e) => e.description || "").join(" ").length;
+
+      return size > threshold;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const fullWidthClass = isLongMemory() ? " memory-card--full" : "";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="memory-card"
+      className={"memory-card" + fullWidthClass}
     >
       <div className="memory-header">
         <div className="memory-id">#{memory.id}</div>
