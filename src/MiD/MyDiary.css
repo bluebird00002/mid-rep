@@ -209,8 +209,11 @@
 
 .memories-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  /* Let columns shrink to the minimum content size so short cards fit their content.
+     Use auto-fit so columns collapse when there isn't enough space. */
+  grid-template-columns: repeat(auto-fit, minmax(min-content, 1fr));
   gap: 40px;
+  justify-items: start;
   align-items: start;
 }
 
