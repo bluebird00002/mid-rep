@@ -68,73 +68,60 @@ function LandingPage() {
             formatedDay &&
             formatedMonth &&
             formatedWeekDay && (
-              <div>
-                <div className="day-container">
-                  <motion.div
-                    initial={{ opacity: 0, x: -100, scale: 0.8 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    transition={{
-                      duration: 0.7,
-                      type: easeIn,
-                      delay: 5,
-                    }}
-                    className="clock-container"
-                  >
-                    <motion.div
-                      initial={{ opacity: 0, x: -50, scale: 0.8 }}
-                      animate={{ opacity: 1, x: 0, scale: 1 }}
-                      transition={{
-                        duration: 0.7,
-                        type: easeIn,
-                        delay: 5.5,
-                      }}
-                      className="clock-time"
-                    >
-                      {hour} : {minutes}
-                    </motion.div>
-                  </motion.div>
+              <div className="day-container">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: 0.7,
+                    type: easeIn,
+                    delay: 5,
+                  }}
+                  className="clock-container"
+                >
+                  <div className="clock-time">
+                    {hour} : {minutes}
+                  </div>
+                </motion.div>
 
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{
-                      duration: 0.7,
-                      type: easeIn,
-                      delay: 4,
-                    }}
-                    className="formatted-month"
-                  >
-                    {formatedMonth}
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{
-                      opacity: 1,
-                      scale: 1,
-                      transform: "rotate(-90deg)",
-                    }}
-                    transition={{
-                      duration: 0.7,
-                      type: easeIn,
-                      delay: 4,
-                    }}
-                    className="formatted-week-day"
-                  >
-                    {formatedWeekDay}
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{
-                      duration: 0.7,
-                      type: easeIn,
-                      delay: 3,
-                    }}
-                    className="formated-day"
-                  >
-                    {formatedDay}
-                  </motion.div>
-                </div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: 0.7,
+                    type: easeIn,
+                    delay: 3,
+                  }}
+                  className="formated-day"
+                >
+                  {formatedDay}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: 0.7,
+                    type: easeIn,
+                    delay: 4,
+                  }}
+                  className="formatted-month"
+                >
+                  {formatedMonth}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    duration: 0.7,
+                    type: easeIn,
+                    delay: 4,
+                  }}
+                  className="formatted-week-day"
+                >
+                  {formatedWeekDay}
+                </motion.div>
               </div>
             )}
         </div>

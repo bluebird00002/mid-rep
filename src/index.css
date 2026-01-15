@@ -1,500 +1,453 @@
-body {
-    margin: 0;
-    background: linear-gradient(#0000007e, #000000ad), url("./assets/helloWorld.jpg");
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    width: 100vw;
+/* Import Orbitron for the clock display (fallbacks provided) */
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap");
 
-    height: 100vh;
+body {
+  margin: 0;
+  background: linear-gradient(#0000007e, #000000ad),
+    url("./assets/helloWorld.jpg");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  width: 100vw;
+
+  height: 100vh;
 }
 
 a {
-    text-decoration: none;
-    color: inherit;
+  text-decoration: none;
+  color: inherit;
 }
 
-
 .landing-page-container {
-    width: 100vw;
-    height: 100vh;
-    margin: 0;
-    background: linear-gradient(#00000023, #7b520489), url("./assets/nightlihghts.jpg");
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    display: flex;
-    flex-direction: row;
-    overflow: hidden;
-
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  background: linear-gradient(#00000023, #7b520489),
+    url("./assets/nightlihghts.jpg");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
 }
 
 .lp-columns {
-    flex-grow: 1;
+  flex-grow: 1;
 }
 
 .lp-columns:nth-of-type(1) {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .lp-columns:nth-of-type(2) {
-    display: flex;
-    flex-direction: column;
-
+  display: flex;
+  flex-direction: column;
 }
 
 .lp-columns:nth-of-type(3) {
-    width: 50%;
-    display: flex;
-    flex-direction: column;
-
+  width: 50%;
+  display: flex;
+  flex-direction: column;
 }
 
 .lp-col-3-rows {
-    flex-grow: 1;
-
+  flex-grow: 1;
 }
 
 .lp-col-3-rows:nth-of-type(1) {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
 }
 
 .lp-col-3-rows:nth-of-type(2) {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: flex-end;
-    color: #ffffffcd;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  color: #ffffffcd;
 }
 
 .bottom-icons {
-    flex-grow: 1;
-    background-color: #00000061;
-    padding: 8px;
-    cursor: pointer;
-    transition: all 0.56s;
+  flex-grow: 1;
+  background-color: #00000061;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.56s;
 }
 
 .bottom-icons:hover {
-    color: #ffa600db;
-    background-color: #00000081;
+  color: #ffa600db;
+  background-color: #00000081;
 }
 
 .bottom-icons:nth-of-type(1) {
-    border-top-left-radius: 7px;
+  border-top-left-radius: 7px;
 }
 
 .lp-texts {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .lp-texts:nth-of-type(2) {
-    justify-content: flex-end;
+  justify-content: flex-end;
 }
 
 .lp-texts p {
-    height: fit-content;
-    width: 70%;
-    text-align: center;
-    padding: 2px;
-    color: #ffffffcd;
-    font-family: sans-serif;
-    font-size: small;
-    font-weight: bold;
-    line-height: 1.4rem;
-    margin: 0;
+  height: fit-content;
+  width: 70%;
+  text-align: center;
+  padding: 2px;
+  color: #ffffffcd;
+  font-family: sans-serif;
+  font-size: small;
+  font-weight: bold;
+  line-height: 1.4rem;
+  margin: 0;
 }
 
 .lp-texts:nth-of-type(2) p {
-    margin-bottom: 5%;
-
+  margin-bottom: 5%;
 }
 
 .lp-texts:nth-of-type(1) {
-    justify-content: flex-start;
+  justify-content: flex-start;
 }
 
 .lp-texts:nth-of-type(1) p {
-    margin-top: 5%;
+  margin-top: 5%;
 }
 
 .clock-container {
-    width: fit-content;
-    height: fit-content;
-    margin: 0;
-    color: #9ca3af;
-    font-size: larger;
-    position: absolute;
-    left: 40%;
-    top: 60%;
-    border-bottom: 2px solid rgba(156, 163, 175, 0.18);
-    padding-bottom: 10px;
-    text-align: left;
+  width: fit-content;
+  height: fit-content;
+  margin: 0;
+  color: #ffffffcd;
+  font-size: larger;
+  position: relative;
+  border: none;
+  padding: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Clock time (hours:minutes) */
+.clock-time {
+  font-family: "Sora", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  color: #ffffffcd;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 15px rgba(255, 166, 0, 0.15);
+  font-variant-numeric: tabular-nums;
+}
 
 .day-container {
-    position: relative;
-    padding: 10px;
-    font-family: sans-serif;
-    font-weight: bolder;
+  position: relative;
+  padding: 40px 20px;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
 }
 
 .formated-day {
-    font-size: 21rem;
-    /* Use same font stack as the month for consistency */
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    /* Black -> dark orange to match landing background */
-    background: linear-gradient(180deg, #0b0b0b 0%, #7b5204 85%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.03);
+  font-size: clamp(8rem, 20vw, 18rem);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #ffffffcd;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -2px;
+  text-shadow: 0 4px 20px rgba(255, 166, 0, 0.2);
 }
-
-/* Apply matching gradient to the clock time text (hours:minutes) on desktop */
-.clock-container>div {
-    /* Match date: font, weight, and gradient for Rainmeter-like look */
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 900;
-    font-size: 1.5rem;
-    /* larger so time is highly visible */
-    background: linear-gradient(180deg, #575656 0%, #614002 85%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 0 12px 28px rgba(30, 29, 29, 0.6), 0 1px 0 rgba(214, 212, 212, 0.185);
-
-
-}
-
 
 .formatted-month {
-    /* Use same visual treatment as date for cohesion */
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 4rem;
-    position: absolute;
-    background: linear-gradient(180deg, #575656 0%, #614002 85%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 0 10px 22px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
-    bottom: 40%;
-    right: -12%;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    opacity: 0.95;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(1.2rem, 4vw, 2.5rem);
+  position: relative;
+  color: #ffffffcd;
+  text-shadow: 0 2px 10px rgba(255, 166, 0, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 500;
+  opacity: 0.9;
 }
-
 
 .formatted-week-day {
-    /* Match date gradient and font feel; rotated label stays */
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    transform: rotate(-90deg);
-    position: absolute;
-    bottom: 43%;
-    left: -10%;
-    font-size: 4rem;
-    background: linear-gradient(180deg, #575656 0%, #614002 85%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 0 10px 22px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
-    opacity: 0.95;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  position: relative;
+  font-size: clamp(1rem, 3.5vw, 2rem);
+  color: #ffffffcd;
+  text-shadow: 0 2px 10px rgba(255, 166, 0, 0.15);
+  font-weight: 400;
+  letter-spacing: 1px;
+  opacity: 0.95;
 }
 
-
-
 .quote-icon {
-    color: #ffffffcd;
-    width: fit-content;
+  color: #ffffffcd;
+  width: fit-content;
 }
 
 .app-icon {
-    width: fit-content;
-    height: fit-content;
-    box-shadow: inset 0 0 5px #53390446;
-    border-radius: 3px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: #ffffffcd;
-    cursor: pointer;
-    transition: all 0.56s;
-    padding: 8px;
-
+  width: fit-content;
+  height: fit-content;
+  box-shadow: inset 0 0 5px #53390446;
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #ffffffcd;
+  cursor: pointer;
+  transition: all 0.56s;
+  padding: 8px;
 }
 
 .app-name {
-    font-family: sans-serif;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: bolder;
+  font-family: sans-serif;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: bolder;
 }
 
-
-
 .app-icon:hover {
-    transform: scale(1.1);
-    color: #ffa500;
+  transform: scale(1.1);
+  color: #ffa500;
 }
 
 .app-name-i {
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: bolder;
-    color: #ffa500;
-    padding: 2px;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bolder;
+  color: #ffa500;
+  padding: 2px;
 }
 
 .app-name-i:hover {
-    color: #ffffff !important;
+  color: #ffffff !important;
 }
-
 
 .welcome-text {
-    color: #ffffff;
+  color: #ffffff;
 }
-
 
 .clock-icon-mob {
-    display: none;
+  display: none;
 }
 
-
 .top-icons-par {
-    display: none;
+  display: none;
 }
 
 /* Smooth Clock Animation - Subtle Fade */
 @keyframes smoothClockPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
 
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.95;
-    }
+  50% {
+    opacity: 0.95;
+  }
 }
 
+@media screen and (max-width: 700px) {
+  .landing-page-container {
+    flex-wrap: wrap;
+    background-image: none;
+    background-color: #ffffff1f;
+    backdrop-filter: blur(2px);
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+  }
 
-@media screen and (max-width:700px) {
-    .landing-page-container {
-        flex-wrap: wrap;
-        background-image: none;
-        background-color: #ffffff1f;
-        backdrop-filter: blur(2px);
-        flex-direction: column;
-        justify-content: space-around;
-        align-items: center;
-    }
+  .lp-columns {
+    width: 100%;
+    height: auto;
+    flex-grow: 0;
+  }
 
-    .lp-columns {
-        width: 100%;
-        height: auto;
-        flex-grow: 0;
-    }
+  .lp-columns:nth-of-type(1) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+    order: 1;
+  }
 
-    .lp-columns:nth-of-type(1) {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: 20px 0;
-        order: 1;
-    }
+  .lp-columns:nth-of-type(2) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 20px;
+    order: 2;
+  }
 
-    .lp-columns:nth-of-type(2) {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        padding: 20px;
-        order: 2;
-    }
+  .lp-columns:nth-of-type(3) {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    order: 3;
+    padding: 20px 0;
+  }
 
-    .lp-columns:nth-of-type(3) {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        order: 3;
-        padding: 20px 0;
-    }
+  .clock-icon {
+    display: none;
+  }
 
-    .clock-icon {
-        display: none;
-    }
+  .clock-icon-mob {
+    display: block;
+    color: #ffffffcd;
+  }
 
-    .clock-icon-mob {
-        display: block;
-        color: #ffffffcd;
+  .day-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 30px 20px;
+    width: 100%;
+    gap: 12px;
+  }
 
-    }
+  .clock-container {
+    position: relative;
+    top: auto;
+    left: auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    backdrop-filter: none;
+    box-shadow: none;
+    width: fit-content;
+    animation: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
 
-    .day-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        padding: 0;
-        width: 100%;
-        gap: 20px;
-        /* more breathing room between elements on small screens */
-    }
+  .clock-time {
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    font-weight: 300;
+    font-family: "Sora", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    text-wrap: nowrap;
+    animation: none;
+    color: #ffffffcd;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 10px rgba(255, 166, 0, 0.1);
+  }
 
-    .clock-container {
-        position: absolute;
-        top: -10vh;
-        left: -10vw;
+  .formated-day {
+    display: block;
+    font-size: clamp(5rem, 18vw, 12rem);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: #ffffffcd;
+    font-weight: 700;
+    text-shadow: 0 3px 15px rgba(255, 166, 0, 0.15);
+    margin: 0;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
 
-        /* reduced padding, remove framed look */
-        background: transparent;
-        /* remove background on mobile as requested */
-        border: none;
-        /* remove border */
-        border-radius: 0;
-        backdrop-filter: none;
-        box-shadow: none;
-        width: fit-content;
-        animation: none;
+  .formatted-month {
+    color: #ffffffcd;
+    background: none;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: unset;
+    display: block;
+    position: relative;
+    bottom: auto;
+    right: auto;
+    font-size: clamp(0.9rem, 3vw, 1.5rem);
+    margin: 0;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 500;
+    opacity: 0.85;
+    text-shadow: 0 1px 8px rgba(255, 166, 0, 0.08);
+  }
 
-    }
+  .formatted-week-day {
+    display: block;
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    font-size: clamp(0.9rem, 3vw, 1.5rem);
+    color: #ffffffcd;
+    margin: 0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400;
+    opacity: 0.9;
+    background: none;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: unset;
+    text-shadow: 0 1px 8px rgba(255, 166, 0, 0.1);
+  }
 
+  .bottom-icons {
+    display: none;
+  }
 
-    .clock-container>div {
-        position: relative;
+  .top-icons-par {
+    display: none !important;
+  }
 
+  .top-icons-mob {
+    display: none !important;
+  }
 
-        font-size: 3.6rem;
-        /* slightly larger on phones */
-        font-weight: 800;
-        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  .app-icon {
+    margin: 15px;
+    padding: 15px;
+  }
 
-        text-wrap: nowrap;
-        animation: none;
-        /* Softer gradient: reduce area of pure black so it fades more gently */
-        /* Mobile: softer black -> dark orange gradient */
-        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
-        background-clip: text;
+  .lp-texts:nth-of-type(1) {
+    display: none;
+  }
 
-        -webkit-text-fill-color: transparent;
+  .lp-texts:nth-of-type(2) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 0;
+    width: 100%;
+  }
 
-        text-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.02);
-    }
+  .lp-texts p {
+    font-size: 0.85rem;
+    width: 90%;
+    margin: 0;
+    line-height: 1.3;
+  }
 
-    .formated-day {
-        display: block;
-        font-size: 3.8rem;
-        /* slightly larger on phones */
-        /* Match the month font family for consistency on mobile */
-        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        /* Mobile: black -> dark orange, softened for small screens */
-        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.02);
-        margin: 0 0 8px 0;
-        letter-spacing: 1px;
-    }
-
-    .formatted-month {
-        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
-        background-clip: text;
-
-        display: block;
-        position: relative;
-        bottom: auto;
-        right: auto;
-
-        font-size: 1.15rem;
-        /* slightly larger */
-        color: #c7cace;
-        margin: 10px 0 0 0;
-        /* increase top margin so it doesn't touch other elements */
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        font-weight: 600;
-        opacity: 0.98;
-
-    }
-
-    .formatted-week-day {
-        display: block;
-        position: relative;
-        bottom: auto;
-        left: auto;
-        transform: none;
-        font-size: 1.15rem;
-        /* slightly larger */
-        color: #c7cace;
-        margin: 10px 0 0 0;
-        /* increased spacing */
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        font-weight: 600;
-        opacity: 0.98;
-
-        background: linear-gradient(180deg, #4a4949 0%, #d7d4cf 85%);
-        background-clip: text;
-    }
-
-    .bottom-icons {
-        display: none;
-    }
-
-    .top-icons-par {
-        display: none !important;
-    }
-
-    .top-icons-mob {
-        display: none !important;
-    }
-
-    .app-icon {
-        margin: 15px;
-        padding: 15px;
-    }
-
-    .lp-texts:nth-of-type(1) {
-        display: none;
-    }
-
-    .lp-texts:nth-of-type(2) {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-grow: 0;
-        width: 100%;
-    }
-
-    .lp-texts p {
-        font-size: 0.85rem;
-        width: 90%;
-        margin: 0;
-        line-height: 1.3;
-    }
-
-    .quote-icon {
-        width: 16px;
-        height: 16px;
-    }
+  .quote-icon {
+    width: 16px;
+    height: 16px;
+  }
 }
 
-/* Import Orbitron for the clock display (fallbacks provided) */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');

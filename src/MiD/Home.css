@@ -11,13 +11,14 @@
   min-height: 100vh;
   background: linear-gradient(
       135deg,
-      rgba(0, 0, 0, 0.8),
-      rgba(255, 166, 0, 0.3)
+      rgba(0, 0, 0, 0.9),
+      rgba(30, 30, 30, 0.88)
     ),
     url("../assets/pexels-lum3n-44775-293229.jpg");
   background-attachment: fixed;
   background-position: center;
   background-size: cover;
+  background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
@@ -368,6 +369,7 @@
 .login-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+
   transform: none;
 }
 
