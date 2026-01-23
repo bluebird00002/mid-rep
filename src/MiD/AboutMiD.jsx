@@ -86,10 +86,11 @@ function AboutMiD() {
 
   // Auto-advance through intro stages
   useEffect(() => {
-    if (currentStage >= 1 && currentStage <= 3) {
+    if (currentStage >= 1 && currentStage <= 4) {
+      const delay = currentStage === 4 ? 2500 : 2000; // Slightly longer delay for final init message
       const timer = setTimeout(() => {
         setCurrentStage(currentStage + 1);
-      }, 2000); // 2 second delay between stages
+      }, delay);
       return () => clearTimeout(timer);
     }
   }, [currentStage]);
