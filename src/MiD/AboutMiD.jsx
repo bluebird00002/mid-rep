@@ -84,6 +84,16 @@ function AboutMiD() {
     }
   }, [currentStage, messages]);
 
+  // Auto-advance through intro stages
+  useEffect(() => {
+    if (currentStage >= 1 && currentStage <= 3) {
+      const timer = setTimeout(() => {
+        setCurrentStage(currentStage + 1);
+      }, 2000); // 2 second delay between stages
+      return () => clearTimeout(timer);
+    }
+  }, [currentStage]);
+
   // Get AI response for user input
   const getAIResponse = async (userMessage) => {
     if (!aiEnabled) {
