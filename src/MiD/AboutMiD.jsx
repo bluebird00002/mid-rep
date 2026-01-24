@@ -101,11 +101,11 @@ function AboutMiD() {
   useEffect(() => {
     if (messages.length > displayedMessageCount) {
       const timer = setTimeout(() => {
-        setDisplayedMessageCount(displayedMessageCount + 1);
-      }, 600); // 600ms delay between messages
+        setDisplayedMessageCount(prev => prev + 1);
+      }, 800); // 800ms delay between each message
       return () => clearTimeout(timer);
     }
-  }, [messages, displayedMessageCount]);
+  }, [messages.length, displayedMessageCount]);
 
   // Get AI response for user input
   const getAIResponse = async (userMessage) => {
@@ -221,9 +221,12 @@ function AboutMiD() {
     navigate("/MiD/MyDiary");
   };
 
-  const renderMessage = (msg, index) => {
+  const renderMessage = (msg, index, isVisible) => {
     const { speaker, message, isAI } = msg;
     const isList = speaker === "list";
+
+    // Only render animation when message is visible
+    const animationDelay = isVisible ? 0 : 999;
 
     return (
       <div
@@ -232,8 +235,8 @@ function AboutMiD() {
       >
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
+          animate={{ opacity: isVisible ? 1 : 0 }}
+          transition={{ duration: 0.2, delay: animationDelay }}
           className="MiD-sys"
         >
           {isList ? (
@@ -247,13 +250,13 @@ function AboutMiD() {
         </motion.div>
         <motion.span
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          animate={{ opacity: isVisible ? 1 : 0 }}
+          transition={{ duration: 0.3, delay: animationDelay }}
         >
           <TypeAnimation
             sequence={[
               "",
-              isAI ? 500 : 1000,
+              isAI ? 500 : 100,
               message,
               () => {},
             ]}
@@ -281,7 +284,7 @@ function AboutMiD() {
     for (let i = 1; i <= currentStage && i <= 4; i++) {
       const msg = systemMessages[i - 1];
       if (msg && currentStage >= i) {
-        rendered.push(renderMessage(msg, `init-${i}`));
+        rendered.push(renderMessage(msg, `init-${i}`, true));
       }
     }
     return rendered;
@@ -416,7 +419,7 @@ function AboutMiD() {
               )}
 
               {/* User messages and AI responses */}
-              {messages.slice(0, displayedMessageCount).map((msg, idx) => renderMessage(msg, `chat-${idx}`))}
+              {messages.slice(0, displayedMessageCount).map((msg, idx) => renderMessage(msg, `chat-${idx}`, true))}
 
               {/* AI Loading indicator */}
               {aiLoading && (
