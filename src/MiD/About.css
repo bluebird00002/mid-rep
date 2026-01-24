@@ -92,27 +92,32 @@
 }
 
 .flex-type input {
-    width: fit-content;
-    min-width: 200px;
-    height: fit-content;
+    width: auto;
+    min-width: 50px;
+    max-width: 800px;
+    height: auto;
     outline: 0;
     border: none;
-    background: none;
+    background: transparent;
     color: #ffa600;
     font-size: inherit;
     font-family: inherit;
     font-weight: inherit;
-    padding: 2px 5px;
+    padding: 2px 0;
     caret-color: #ffa600;
+    resize: none;
+    overflow: hidden;
+    line-height: 1.6;
 }
 
 .flex-type input:focus {
-    background: rgba(255, 166, 0, 0.05);
-    border-radius: 2px;
+    background: transparent;
+    border-radius: 0;
+    outline: none;
 }
 
 .flex-type input::placeholder {
-    color: rgba(255, 166, 0, 0.5);
+    color: rgba(255, 166, 0, 0.3);
     font-style: italic;
 }
 
@@ -127,8 +132,8 @@
     opacity: 0.6;
     color: #999;
     cursor: default;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 2px;
+    background: transparent;
+    border-radius: 0;
 }
 
 .MiD-sys {

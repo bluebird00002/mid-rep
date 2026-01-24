@@ -24,6 +24,8 @@ function AboutMiD() {
   const containerRef = useRef(null);
   const [isNewUser, setIsNewUser] = useState(null);
   const [messages, setMessages] = useState([]);
+  const inputRef = useRef(null);
+  const [displayedMessageCount, setDisplayedMessageCount] = useState(0);
 
   // Initialize AI when component mounts
   useEffect(() => {
@@ -94,6 +96,16 @@ function AboutMiD() {
       return () => clearTimeout(timer);
     }
   }, [currentStage]);
+
+  // Sequential message display for chat messages
+  useEffect(() => {
+    if (messages.length > displayedMessageCount) {
+      const timer = setTimeout(() => {
+        setDisplayedMessageCount(displayedMessageCount + 1);
+      }, 600); // 600ms delay between messages
+      return () => clearTimeout(timer);
+    }
+  }, [messages, displayedMessageCount]);
 
   // Get AI response for user input
   const getAIResponse = async (userMessage) => {
@@ -167,6 +179,13 @@ function AboutMiD() {
 
   const updateInput = (inputKey, value) => {
     setUserInputs((prev) => ({ ...prev, [inputKey]: value }));
+    
+    // Auto-expand input field
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      const newHeight = Math.min(inputRef.current.scrollHeight, 200);
+      inputRef.current.style.height = newHeight + 'px';
+    }
   };
 
   // System messages that don't need AI
@@ -397,7 +416,7 @@ function AboutMiD() {
               )}
 
               {/* User messages and AI responses */}
-              {messages.map((msg, idx) => renderMessage(msg, `chat-${idx}`))}
+              {messages.slice(0, displayedMessageCount).map((msg, idx) => renderMessage(msg, `chat-${idx}`))}
 
               {/* AI Loading indicator */}
               {aiLoading && (
@@ -432,6 +451,7 @@ function AboutMiD() {
                     className="input-field-wrapper"
                   >
                     <input
+                      ref={inputRef}
                       type="text"
                       value={userInputs.question || ""}
                       onChange={(e) =>
