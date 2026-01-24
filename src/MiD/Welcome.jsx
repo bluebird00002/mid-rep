@@ -15,6 +15,7 @@ function Welcome() {
   const [isMobile, setIsMobile] = useState(false);
   const [canProceed, setCanProceed] = useState(false);
   const [inputLocked, setInputLocked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const containerRef = useRef(null);
   const listenerRef = useRef(null);
 
@@ -79,18 +80,22 @@ function Welcome() {
   const handleKeyPress = (e) => {
     if (canProceed && !isMobile && !inputLocked && isNewUser !== null) {
       setInputLocked(true);
-      navigate("/MiD/AboutMiD", {
-        state: { isNewUser, fromWelcome: true },
-      });
+      setIsLoading(true);
+      // Show loading for 3 seconds, then redirect
+      setTimeout(() => {
+        navigate("/MiD/MyDiary");
+      }, 3000);
     }
   };
 
   const handleTouchScreen = (e) => {
     if (canProceed && !inputLocked && isNewUser !== null) {
       setInputLocked(true);
-      navigate("/MiD/AboutMiD", {
-        state: { isNewUser, fromWelcome: true },
-      });
+      setIsLoading(true);
+      // Show loading for 3 seconds, then redirect
+      setTimeout(() => {
+        navigate("/MiD/MyDiary");
+      }, 3000);
     }
   };
 
@@ -106,6 +111,60 @@ function Welcome() {
 
   return (
     <>
+      {/* Loading Interface */}
+      {isLoading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="loading-overlay"
+        >
+          <div className="loading-container">
+            {/* Terminal-like loading animation */}
+            <motion.div
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="loading-text"
+            >
+              <div>Initializing your diary...</div>
+              <motion.div
+                animate={{ scaleX: [0, 1] }}
+                transition={{ duration: 2.5, ease: "easeInOut" }}
+                className="loading-bar"
+              />
+            </motion.div>
+
+            {/* Terminal-style messages */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="terminal-message"
+            >
+              <span className="terminal-prompt">~/mid$</span> Loading memories...
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2 }}
+              className="terminal-message"
+            >
+              <span className="terminal-prompt">~/mid$</span> Syncing with core...
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.9 }}
+              className="terminal-message"
+            >
+              <span className="terminal-prompt">~/mid$</span> Ready to explore...
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+
       <div
         className="welcome-container"
         onClick={handleTouchScreen}
