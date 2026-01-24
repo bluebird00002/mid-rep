@@ -52,7 +52,7 @@ router.post("/chat", async (req, res) => {
     }
 
     // Initialize Gemini model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
     // Build conversation context for Gemini
     const messages = [];
@@ -171,7 +171,7 @@ router.post("/validate-scope", async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
     const validationPrompt = `Is this message related to a personal diary system, memory management, journaling, or emotions tracking? 
 Message: "${message}"
@@ -222,7 +222,7 @@ router.get("/status", (req, res) => {
     data: {
       configured: isConfigured,
       service: "Google Gemini",
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash-exp",
       status: isConfigured ? "ready" : "not configured",
     },
   });
