@@ -18,5 +18,7 @@ services:
         value: mid_diary
       - key: JWT_SECRET
         scope: build,runtime
+      - key: GEMINI_API_KEY
+        scope: build,runtime
       - key: ALLOWED_ORIGINS
         scope: build,runtime
