@@ -135,7 +135,7 @@ function AboutMiD() {
     setInputProcessing(true);
 
     // Add user message to display
-    addMessage("User", inputValue);
+    addMessage("Ceo", inputValue);
 
     // Get AI response if asking a question
     let shouldProceed = true;
