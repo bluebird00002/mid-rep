@@ -342,10 +342,13 @@ function MyDiary() {
         if (parsed.tags?.length) msg += ` Tags: ${parsed.tags.join(", ")}.`;
         if (parsed.category) msg += ` Category: ${parsed.category}.`;
         addMotherMessage(msg);
+        
+        // Display only the newly created memory
+        const newMemory = result.data || result.memory || result;
+        setMemories([newMemory]);
       } else {
         throw new Error("Failed to save memory");
       }
-      await loadMemories();
     } catch (err) {
       console.error("Error creating memory:", err);
       // Only fallback to local storage if it's a network/server error
@@ -364,7 +367,8 @@ function MyDiary() {
         };
         saveToLocalStorage(newMemory);
         addMotherMessage(`Memory saved locally. (Backend unavailable)`);
-        await loadMemories();
+        // Display only the newly created memory
+        setMemories([newMemory]);
       } else {
         // For validation or other errors, show error message
         addSystemMessage(`Error: ${errorMsg || "Failed to create memory"}`);
@@ -500,13 +504,16 @@ function MyDiary() {
         };
 
         try {
-          await api.createMemory(tableData);
+          const result = await api.createMemory(tableData);
           let successMsg = "Table created successfully!";
           if (tableBuilder.data.tags.length)
             successMsg += ` Tags: ${tableBuilder.data.tags.join(", ")}.`;
           if (category) successMsg += ` Category: ${category}.`;
           addMotherMessage(successMsg);
-          await loadMemories();
+          
+          // Display only the newly created table
+          const newMemory = result.data || result.memory || result;
+          setMemories([newMemory]);
         } catch (err) {
           const newMemory = {
             id: Date.now(),
@@ -514,7 +521,8 @@ function MyDiary() {
           };
           saveToLocalStorage(newMemory);
           addMotherMessage("Table saved locally. (Backend unavailable)");
-          await loadMemories();
+          // Display only the newly created table
+          setMemories([newMemory]);
         }
 
         setTableBuilder(null);
@@ -620,7 +628,7 @@ function MyDiary() {
         };
 
         try {
-          await api.createMemory(listData);
+          const result = await api.createMemory(listData);
           let successMsg = "List created successfully!";
           if (listBuilder.data.tags.length)
             successMsg += ` Tags: ${listBuilder.data.tags.join(", ")}.`;
@@ -633,7 +641,9 @@ function MyDiary() {
             addSystemMessage(`  • ${item}`);
           });
 
-          await loadMemories();
+          // Display only the newly created list
+          const newMemory = result.data || result.memory || result;
+          setMemories([newMemory]);
         } catch (err) {
           const newMemory = {
             id: Date.now(),
@@ -641,7 +651,8 @@ function MyDiary() {
           };
           saveToLocalStorage(newMemory);
           addMotherMessage("List saved locally. (Backend unavailable)");
-          await loadMemories();
+          // Display only the newly created list
+          setMemories([newMemory]);
         }
 
         setListBuilder(null);
@@ -769,7 +780,7 @@ function MyDiary() {
         };
 
         try {
-          await api.createMemory(timelineData);
+          const result = await api.createMemory(timelineData);
           let successMsg = "Timeline created successfully!";
           if (timelineBuilder.data.tags.length)
             successMsg += ` Tags: ${timelineBuilder.data.tags.join(", ")}.`;
@@ -785,7 +796,9 @@ function MyDiary() {
             addSystemMessage(`  ${display}`);
           });
 
-          await loadMemories();
+          // Display only the newly created timeline
+          const newMemory = result.data || result.memory || result;
+          setMemories([newMemory]);
         } catch (err) {
           const newMemory = {
             id: Date.now(),
@@ -793,7 +806,8 @@ function MyDiary() {
           };
           saveToLocalStorage(newMemory);
           addMotherMessage("Timeline saved locally. (Backend unavailable)");
-          await loadMemories();
+          // Display only the newly created timeline
+          setMemories([newMemory]);
         }
 
         setTimelineBuilder(null);
@@ -919,8 +933,10 @@ function MyDiary() {
 
       setImageFile(null);
       setImageBuilder(null);
-      // reload memories; loadMemories will merge images and dedupe
-      await loadMemories();
+      // Display only the newly saved image
+      if (returnedMemory) {
+        setMemories([returnedMemory]);
+      }
     } catch (err) {
       // Fallback to local storage
       const newMemory = {
@@ -936,7 +952,8 @@ function MyDiary() {
       addMotherMessage(`Image saved locally. (Backend unavailable)`);
       setImageFile(null);
       setImageBuilder(null);
-      await loadMemories();
+      // Display only the newly saved image
+      setMemories([newMemory]);
     }
   };
 

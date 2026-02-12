@@ -46,10 +46,14 @@ export class CommandParser {
       return this.parseDelete(command);
     }
 
-    // Search/Retrieve commands
+    // Search/Retrieve commands - only exact "show all" for now
+    if (cmd === "show all") {
+      return this.parseRetrieve(command);
+    }
+
+    // Allow other retrieve commands with stricter matching
     if (
       cmd.startsWith("mother,") ||
-      cmd.startsWith("show") ||
       cmd.startsWith("bring up") ||
       cmd.startsWith("list") ||
       cmd.startsWith("search")
