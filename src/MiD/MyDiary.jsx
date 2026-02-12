@@ -344,7 +344,18 @@ function MyDiary() {
         addMotherMessage(msg);
         
         // Display only the newly created memory
-        const newMemory = result.data || result.memory || result;
+        const apiMemory = result.data || result.memory || result;
+        const newMemory = {
+          ...memoryData,
+          ...apiMemory, // API response takes precedence for id, etc.
+          // Ensure we have all required fields
+          id: apiMemory.id || apiMemory.memory_id || Date.now(),
+          content: memoryData.content,
+          type: "text",
+          tags: parsed.tags || [],
+          category: parsed.category,
+          created_at: apiMemory.created_at || memoryData.created_at,
+        };
         setMemories([newMemory]);
       } else {
         throw new Error("Failed to save memory");
@@ -361,8 +372,10 @@ function MyDiary() {
       ) {
         const newMemory = {
           id: Date.now(),
-          ...parsed,
+          content: parsed.content || "",
           type: "text",
+          tags: parsed.tags && Array.isArray(parsed.tags) ? parsed.tags : [],
+          category: parsed.category || null,
           created_at: new Date().toISOString(),
         };
         saveToLocalStorage(newMemory);
