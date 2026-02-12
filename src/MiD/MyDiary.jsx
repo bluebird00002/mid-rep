@@ -2577,11 +2577,12 @@ function MyDiary() {
     addSystemMessage("");
     addSystemMessage("═══ RETRIEVE MEMORIES ═══");
     addSystemMessage("  show all - Retrieve all memories and images");
+    addSystemMessage("  show #tag - Memories tagged with 'tag'");
+    addSystemMessage("  show #tag1 #tag2 - Memories with any of these tags");
     addSystemMessage("  show tags: work - Memories tagged with 'work'");
     addSystemMessage(
       "  show tags: work, ideas - Memories with any of these tags"
     );
-    addSystemMessage("  show #tag1 #tag2 - Hashtag syntax for tags");
     addSystemMessage("  show category: happy - All in category 'happy'");
     addSystemMessage("  show pictures - All images only");
     addSystemMessage("  show all tables - All table memories");
