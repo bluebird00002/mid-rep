@@ -13,9 +13,11 @@ import {
 import { useNavigate } from "react-router-dom";
 import CommandParser from "../utils/commandParser";
 import api from "../services/api";
+
 import MemoryCard from "../components/MemoryCard";
 import ImageCropper from "../components/ImageCropper";
 import { useAuth } from "../context/AuthContext";
+import { AdminDashboard } from "../admin";
 import "./MyDiary.css";
 import "@fontsource/jetbrains-mono";
 
@@ -32,6 +34,10 @@ function MyDiary() {
   const [imageBuilder, setImageBuilder] = useState(null); // { step: 'description'|'tags'|'album'|'confirm', data: {...} }
   const [currentInput, setCurrentInput] = useState("");
   const [pendingAction, setPendingAction] = useState(null); // { type: 'delete'|'edit', data: {...} }
+  const [adminLoginMode, setAdminLoginMode] = useState(false); // true when waiting for admin password
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState(null);
+  const [adminMode, setAdminMode] = useState(false); // true if admin is authenticated
   const [tableBuilder, setTableBuilder] = useState(null); // { step: 'title'|'columns'|'rows'|'more'|'tags', data: {...} }
   const [tableEditor, setTableEditor] = useState(null); // { step: 'menu'|'title'|'columns'|'rows'|'add_row'|'edit_row'|'delete_row'|'tags'|'category', memory: {...}, data: {...} }
   const [listBuilder, setListBuilder] = useState(null); // { step: 'title'|'items'|'tags'|'category', data: {...} }
@@ -170,8 +176,40 @@ function MyDiary() {
     setCommand("");
     setError(null);
 
+    // Handle 'me admin' command
+    if (cmd.trim().toLowerCase() === "me admin") {
+      setAdminLoginMode(true);
+      setAdminPassword("");
+      setAdminError(null);
+      addSystemMessage("Enter admin password:");
+      return;
+    }
+
     // Handle 'about mid' command
     if (cmd.trim().toLowerCase() === "about mid") {
+        // Handle admin password input
+        const handleAdminPasswordInput = async (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (!adminPassword.trim()) return;
+            setAdminError(null);
+            try {
+              // Call backend API to verify admin password
+              const res = await api.adminLogin({ password: adminPassword });
+              if (res && res.success) {
+                setAdminMode(true);
+                setAdminLoginMode(false);
+                setAdminPassword("");
+                setAdminError(null);
+                addSystemMessage("Admin login successful. Welcome, admin!");
+              } else {
+                setAdminError("Incorrect admin password.");
+              }
+            } catch (err) {
+              setAdminError("Admin login failed. Try again.");
+            }
+          }
+        };
       const username = user?.username || "User";
       addMotherMessage(
         `Hello, ${username}!\n\nWelcome to MiD (My Individual Diary) version 1.3. MiD is your personal, private digital diary designed to help you capture, organize, and reflect on your thoughts, memories, and daily experiences.\n\nWith MiD, you can easily create and manage text memories, tables, lists, timelines, and even save pictures. You can tag and categorize your entries, search and filter your memories, and keep everything organized in one secure place.\n\nMiD is built for simplicity and privacy, making it easy for you to record your life, ideas, and feelings in a way that suits you best. Only you have access to your diary, and you can interact with it using simple commands.\n\nType 'help' to see what you can do next!`
@@ -2665,6 +2703,7 @@ function MyDiary() {
   };
 
   const handleKeyPress = (e) => {
+    if (adminLoginMode) return; // Block normal command input when in admin login
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const cmd = currentInput.trim();
@@ -2787,6 +2826,10 @@ function MyDiary() {
       setUploadingProfileImage(false);
     }
   };
+
+  if (adminMode) {
+    return <AdminDashboard onLogout={() => setAdminMode(false)} />;
+  }
 
   return (
     <div className="diary-container">
@@ -2943,21 +2986,43 @@ function MyDiary() {
             <div className="terminal-input-inline">
               <div className="input-prompt">
                 <span className="prompt-text">
-                  {user?.username || "User"}
+                  {adminLoginMode
+                    ? "Admin"
+                    : user?.username || "User"}
                   <ChevronRight size={16} />
                 </span>
-                <input
-                  ref={commandInputRef}
-                  type="text"
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder=""
-                  className="command-input-inline"
-                  autoFocus
-                  spellCheck={false}
-                />
+                {adminLoginMode ? (
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    onKeyPress={handleAdminPasswordInput}
+                    placeholder="Admin password"
+                    className="command-input-inline"
+                    autoFocus
+                    spellCheck={false}
+                  />
+                ) : (
+                  <input
+                    ref={commandInputRef}
+                    type="text"
+                    value={currentInput}
+                    onChange={(e) => setCurrentInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder=""
+                    className="command-input-inline"
+                    autoFocus
+                    spellCheck={false}
+                  />
+                )}
               </div>
+              {adminLoginMode && adminError && (
+                <div className="history-entry error">
+                  <span className="history-speaker">Admin</span>
+                  <ChevronRight size={14} />
+                  <span className="history-message">{adminError}</span>
+                </div>
+              )}
               {/* Hidden file input for image upload via "save picture" command */}
               <input
                 ref={fileInputRef}

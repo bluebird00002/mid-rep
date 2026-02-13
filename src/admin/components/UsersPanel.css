@@ -1,0 +1,97 @@
+.users-panel h2 {
+  color: var(--mid-accent, #7ec4fa);
+}
+
+.users-actions-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+.users-search-input {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #2e3650;
+  background: #232837;
+  color: var(--mid-fg, #f3f6fa);
+  font-size: 1rem;
+}
+.users-refresh-btn {
+  background: var(--mid-accent, #7ec4fa);
+  color: #181c24;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.users-refresh-btn:hover {
+  background: #5ea6d6;
+}
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #232837;
+  color: var(--mid-fg, #f3f6fa);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1rem;
+  box-shadow: 0 1px 8px 0 rgba(0,0,0,0.06);
+}
+.users-table th, .users-table td {
+  padding: 0.7rem 1rem;
+  text-align: left;
+}
+.users-table th {
+  background: #1a1e29;
+  color: var(--mid-accent, #7ec4fa);
+  font-weight: bold;
+}
+.users-table tr:nth-child(even) {
+  background: #202432;
+}
+.users-table tr:hover {
+  background: #2e3650;
+}
+.users-action-btn {
+  margin-right: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 5px;
+  border: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.users-action-btn.delete {
+  background: #e74c3c;
+  color: #fff;
+}
+.users-action-btn.delete:hover {
+  background: #c0392b;
+}
+.users-action-btn.reset {
+  background: #7ec4fa;
+  color: #181c24;
+}
+.users-action-btn.reset:hover {
+  background: #5ea6d6;
+}
+.users-reset-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.users-reset-input {
+  padding: 0.3rem 0.7rem;
+  border-radius: 5px;
+  border: 1px solid #2e3650;
+  background: #202432;
+  color: var(--mid-fg, #f3f6fa);
+  font-size: 0.95rem;
+  margin-right: 0.2rem;
+}
+.users-loading, .users-error, .users-action-msg {
+  margin: 1rem 0;
+  color: var(--mid-accent, #7ec4fa);
+}

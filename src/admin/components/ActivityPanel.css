@@ -1,0 +1,47 @@
+.activity-panel h2 {
+  color: var(--mid-accent, #7ec4fa);
+}
+
+.activity-refresh-btn {
+  background: var(--mid-accent, #7ec4fa);
+  color: #181c24;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: background 0.15s;
+}
+.activity-refresh-btn:hover {
+  background: #5ea6d6;
+}
+.activity-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #232837;
+  color: var(--mid-fg, #f3f6fa);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1rem;
+  box-shadow: 0 1px 8px 0 rgba(0,0,0,0.06);
+}
+.activity-table th, .activity-table td {
+  padding: 0.7rem 1rem;
+  text-align: left;
+}
+.activity-table th {
+  background: #1a1e29;
+  color: var(--mid-accent, #7ec4fa);
+  font-weight: bold;
+}
+.activity-table tr:nth-child(even) {
+  background: #202432;
+}
+.activity-table tr:hover {
+  background: #2e3650;
+}
+.activity-loading, .activity-error {
+  margin: 1rem 0;
+  color: var(--mid-accent, #7ec4fa);
+}

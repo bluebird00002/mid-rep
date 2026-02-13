@@ -1,3 +1,41 @@
+      // Admin: delete user by ID
+      async deleteUser(userId) {
+        return this.request(`/admin/users/${userId}`, {
+          method: "DELETE",
+        });
+      }
+
+      // Admin: reset user password
+      async resetUserPassword(userId, newPassword) {
+        return this.request(`/admin/users/${userId}/reset-password`, {
+          method: "POST",
+          body: JSON.stringify({ newPassword }),
+        });
+      }
+    // Admin: fetch all users
+    async getAllUsers() {
+      return this.request("/admin/users");
+    }
+
+    // Admin: fetch activity log
+    async getActivityLog() {
+      return this.request("/admin/activity");
+    }
+
+    // Admin: change password
+    async changeAdminPassword({ username, oldPassword, newPassword }) {
+      return this.request("/admin/change-password", {
+        method: "POST",
+        body: JSON.stringify({ username, oldPassword, newPassword }),
+      });
+    }
+  // Admin authentication
+  async adminLogin({ password }) {
+    return this.request("/admin/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+  }
 // API Service for MiD Backend Communication
 // Node.js/Express backend
 

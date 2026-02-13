@@ -11,6 +11,7 @@ import statsRoutes from "./routes/stats.js";
 import tagRoutes from "./routes/tags.js";
 import categoryRoutes from "./routes/categories.js";
 import aiRoutes from "./routes/ai.js";
+import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
 
@@ -151,6 +152,8 @@ app.use("/api/categories", categoryRoutes);
 console.log("✅ Categories routes mounted at /api/categories");
 app.use("/api/ai", aiRoutes);
 console.log("✅ AI routes mounted at /api/ai");
+app.use("/api/admin", adminRoutes);
+console.log("✅ Admin routes mounted at /api/admin");
 
 // Health check
 app.get("/api/health", (req, res) => {

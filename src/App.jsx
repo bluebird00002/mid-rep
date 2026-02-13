@@ -6,6 +6,7 @@ import CreateAccount from "./MiD/CreateAccount";
 import ForgotPassword from "./MiD/ForgotPassword";
 import Welcome from "./MiD/Welcome";
 import MyDiary from "./MiD/MyDiary";
+import { AdminDashboard } from "../src/admin";
 import SessionTimeoutModal from "./components/SessionTimeoutModal";
 import { useRestoreLastPage } from "./hooks/usePageRestoration";
 
@@ -22,6 +23,7 @@ function App() {
         <Route path="/MiD/ForgotPassword" element={<ForgotPassword />}></Route>
         <Route path="/MiD/Welcome" element={<Welcome />}></Route>
         <Route path="/MiD/MyDiary" element={<MyDiary />}></Route>
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </>
   );
