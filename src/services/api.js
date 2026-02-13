@@ -1,12 +1,7 @@
 
 
 class MiDApi {
-  constructor() {
-    this.baseURL = API_BASE_URL;
-    this.token = null;
-  }
-
-  setToken(token) {
+  // ...existing code...
     this.token = token;
   }
 
