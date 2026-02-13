@@ -30,9 +30,9 @@ router.post('/users/:id/reset-password', async (req, res) => {
   }
 });
 
-const express = require('express');
-const bcrypt = require('bcrypt');
-const db = require('../config/database');
+import express from 'express';
+import bcrypt from 'bcrypt';
+import db from '../config/database.js';
 const router = express.Router();
 
 // Admin login
@@ -88,4 +88,4 @@ router.get('/activity', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

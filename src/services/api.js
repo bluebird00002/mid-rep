@@ -1,27 +1,4 @@
-// API Service for MiD Backend Communication
-// Node.js/Express backend
 
-// Detect backend URL dynamically based on current location
-function getAPIBaseURL() {
-  // Use environment variable if set (for production)
-  if (import.meta.env.VITE_API_BASE) {
-    return import.meta.env.VITE_API_BASE;
-  }
-
-  // Fallback for local development
-  const host = window.location.hostname;
-  const port = import.meta.env.VITE_API_PORT || 3000;
-
-  // If we're on localhost or 127.0.0.1, use localhost
-  if (host === "localhost" || host === "127.0.0.1") {
-    return `http://localhost:${port}/api`;
-  }
-
-  // If we're on any other IP (including mobile network), use that IP with the port
-  return `http://${host}:${port}/api`;
-}
-
-const API_BASE_URL = getAPIBaseURL();
 
 class MiDApi {
   constructor() {
@@ -145,32 +122,6 @@ class MiDApi {
       body: JSON.stringify({ password }),
     });
   }
-// API Service for MiD Backend Communication
-// Node.js/Express backend
-
-// Detect backend URL dynamically based on current location
-function getAPIBaseURL() {
-  // Use environment variable if set (for production)
-  if (import.meta.env.VITE_API_BASE) {
-    return import.meta.env.VITE_API_BASE;
-  }
-
-  // Fallback for local development
-  const host = window.location.hostname;
-  const port = import.meta.env.VITE_API_PORT || 3000;
-
-  // If we're on localhost or 127.0.0.1, use localhost
-  if (host === "localhost" || host === "127.0.0.1") {
-    return `http://localhost:${port}/api`;
-  }
-
-  // If we're on any other IP (including mobile network), use that IP with the port
-  return `http://${host}:${port}/api`;
-}
-
-const API_BASE_URL = getAPIBaseURL();
-
-class MiDApi {
   constructor() {
     this.baseURL = API_BASE_URL;
     this.token = null;
