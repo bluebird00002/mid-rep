@@ -97,9 +97,11 @@ function MyDiary() {
           addSystemMessage("Admin login successful. Welcome, admin!");
         } else {
           setAdminError("Incorrect admin password.");
+          addSystemMessage("Incorrect admin password.");
         }
       } catch (err) {
         setAdminError("Admin login failed. Try again.");
+        addSystemMessage("Admin login failed. Try again.");
       }
     }
   };
@@ -3022,7 +3024,7 @@ function MyDiary() {
               </div>
               {adminLoginMode && adminError && (
                 <div className="history-entry error">
-                  <span className="history-speaker">Admin</span>
+                  <span className="history-speaker">MiD</span>
                   <ChevronRight size={14} />
                   <span className="history-message">{adminError}</span>
                 </div>
