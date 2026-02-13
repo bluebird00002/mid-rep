@@ -84,9 +84,27 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Admin login error:", err);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    // Log DB environment variables to help debug connection issues (don't log passwords)
+    try {
+      console.error("DB_DEBUG: host=", process.env.DB_HOST, "port=", process.env.DB_PORT, "user=", process.env.DB_USER ? process.env.DB_USER.replace(/./g, '*') : undefined);
+    } catch (e) {
+      console.error("DB debug logging failed", e);
+    }
+    if (err && err.code === 'ECONNREFUSED') {
+      return res.status(503).json({ success: false, message: "Database connection refused" });
+    }
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+});
+
+// Debug endpoint to check DB connectivity quickly (remove or protect in production)
+router.get('/debug-db', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT 1 as ok');
+    res.json({ success: true, ok: rows[0] });
+  } catch (err) {
+    console.error('DB debug query failed:', err);
+    res.status(503).json({ success: false, message: 'Database unavailable', error: err.message });
   }
 });
 
