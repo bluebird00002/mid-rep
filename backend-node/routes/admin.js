@@ -1,32 +1,29 @@
 import express from "express";
-import db from "../config/database.js";
 import { createRequire } from "module";
+import { db as firestore, admin as firebaseAdmin } from "../config/firebase.js";
 
 // Use createRequire to allow conditional require of native bcrypt
 const require = createRequire(import.meta.url);
 let bcrypt;
 try {
-  // Prefer native bcrypt if available
   bcrypt = require("bcrypt");
 } catch (e) {
-  // Fallback to bcryptjs which is pure JS and more likely available in restricted envs
   try {
     bcrypt = require("bcryptjs");
     console.log("Using bcryptjs fallback for password hashing/comparison");
   } catch (err) {
     console.error("No bcrypt or bcryptjs available:", err);
-    // Re-throw so that the app startup or route import will surface an error clearly
     throw err;
   }
 }
 
 const router = express.Router();
 
-// Delete a user by ID (permanent)
+// Delete a user by ID (permanent) - using Firestore
 router.delete("/users/:id", async (req, res) => {
   const userId = req.params.id;
   try {
-    await db.query("DELETE FROM users WHERE id = ?", [userId]);
+    await firestore.collection("users").doc(userId).delete();
     res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
     res
@@ -47,10 +44,10 @@ router.post("/users/:id/reset-password", async (req, res) => {
   }
   try {
     const hash = await bcrypt.hash(newPassword, 10);
-    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [
-      hash,
-      userId,
-    ]);
+    await firestore.collection("users").doc(userId).update({
+      password_hash: hash,
+      updated_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+    });
     res.json({ success: true, message: "Password reset successfully" });
   } catch (err) {
     res
@@ -64,35 +61,37 @@ router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const checkUsername = username || "admin";
   try {
-    const [rows] = await db.query(
-      "SELECT * FROM admin_accounts WHERE username = ?",
-      [checkUsername],
-    );
-    if (!rows.length)
-      return res
-        .status(401)
-        .json({ success: false, message: "Admin not found" });
-    const admin = rows[0];
-    const match = await bcrypt.compare(password, admin.password_hash);
+    const snapshot = await firestore
+      .collection("admin_accounts")
+      .where("username", "==", checkUsername)
+      .limit(1)
+      .get();
+
+    let adminDoc;
+    if (snapshot.empty) {
+      // Create default admin if not present
+      const defaultPassword = "mid-me";
+      const hash = await bcrypt.hash(defaultPassword, 10);
+      const newRef = firestore.collection("admin_accounts").doc();
+      await newRef.set({
+        username: checkUsername,
+        password_hash: hash,
+        created_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+      });
+      adminDoc = { id: newRef.id, username: checkUsername, password_hash: hash };
+      console.log(`Created default admin account for username=${checkUsername}`);
+    } else {
+      const doc = snapshot.docs[0];
+      adminDoc = { id: doc.id, ...(doc.data() || {}) };
+    }
+
+    const match = await bcrypt.compare(password, adminDoc.password_hash);
     if (!match)
-      return res
-        .status(401)
-        .json({ success: false, message: "Incorrect password" });
-    res.json({
-      success: true,
-      admin: { id: admin.id, username: admin.username },
-    });
+      return res.status(401).json({ success: false, message: "Incorrect password" });
+
+    res.json({ success: true, admin: { id: adminDoc.id, username: adminDoc.username } });
   } catch (err) {
     console.error("Admin login error:", err);
-    // Log DB environment variables to help debug connection issues (don't log passwords)
-    try {
-      console.error("DB_DEBUG: host=", process.env.DB_HOST, "port=", process.env.DB_PORT, "user=", process.env.DB_USER ? process.env.DB_USER.replace(/./g, '*') : undefined);
-    } catch (e) {
-      console.error("DB debug logging failed", e);
-    }
-    if (err && err.code === 'ECONNREFUSED') {
-      return res.status(503).json({ success: false, message: "Database connection refused" });
-    }
     res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
 });
@@ -112,58 +111,42 @@ router.get('/debug-db', async (req, res) => {
 router.post("/change-password", async (req, res) => {
   const { username, oldPassword, newPassword } = req.body;
   try {
-    const [rows] = await db.query(
-      "SELECT * FROM admin_accounts WHERE username = ?",
-      [username],
-    );
-    if (!rows.length)
-      return res
-        .status(401)
-        .json({ success: false, message: "Admin not found" });
-    const admin = rows[0];
-    const match = await bcrypt.compare(oldPassword, admin.password_hash);
-    if (!match)
-      return res
-        .status(401)
-        .json({ success: false, message: "Incorrect old password" });
+    const snapshot = await firestore.collection("admin_accounts").where("username", "==", username).limit(1).get();
+    if (snapshot.empty) return res.status(401).json({ success: false, message: "Admin not found" });
+    const doc = snapshot.docs[0];
+    const adminDoc = { id: doc.id, ...(doc.data() || {}) };
+    const match = await bcrypt.compare(oldPassword, adminDoc.password_hash);
+    if (!match) return res.status(401).json({ success: false, message: "Incorrect old password" });
     const newHash = await bcrypt.hash(newPassword, 10);
-    await db.query("UPDATE admin_accounts SET password_hash = ? WHERE id = ?", [
-      newHash,
-      admin.id,
-    ]);
+    await firestore.collection("admin_accounts").doc(adminDoc.id).update({
+      password_hash: newHash,
+      updated_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+    });
     res.json({ success: true, message: "Password changed successfully" });
   } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
 });
 
 // List all users (for admin dashboard)
 router.get("/users", async (req, res) => {
   try {
-    const [users] = await db.query(
-      "SELECT id, username, created_at FROM users",
-    );
+    const snapshot = await firestore.collection("users").get();
+    const users = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
     res.json({ success: true, users });
   } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
 });
 
 // List activity logs (for admin dashboard)
 router.get("/activity", async (req, res) => {
   try {
-    const [logs] = await db.query(
-      "SELECT * FROM login_track ORDER BY login_time DESC LIMIT 100",
-    );
+    const snapshot = await firestore.collection("login_track").orderBy("login_time", "desc").limit(100).get();
+    const logs = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
     res.json({ success: true, logs });
   } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
 });
 
