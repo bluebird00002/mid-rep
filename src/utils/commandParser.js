@@ -3,6 +3,10 @@
 
 export class CommandParser {
   static parse(command) {
+        // About command
+        if (cmd === "about mid") {
+          return { type: "about_mid" };
+        }
     const cmd = command.trim().toLowerCase();
     const parts = cmd.split(/\s+/);
 

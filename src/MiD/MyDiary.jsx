@@ -170,6 +170,15 @@ function MyDiary() {
     setCommand("");
     setError(null);
 
+    // Handle 'about mid' command
+    if (cmd.trim().toLowerCase() === "about mid") {
+      const username = user?.username || "User";
+      addMotherMessage(
+        `Hello, ${username}!\n\nWelcome to MiD (My Individual Diary) version 1.3. MiD is your personal, private digital diary designed to help you capture, organize, and reflect on your thoughts, memories, and daily experiences.\n\nWith MiD, you can easily create and manage text memories, tables, lists, timelines, and even save pictures. You can tag and categorize your entries, search and filter your memories, and keep everything organized in one secure place.\n\nMiD is built for simplicity and privacy, making it easy for you to record your life, ideas, and feelings in a way that suits you best. Only you have access to your diary, and you can interact with it using simple commands.\n\nType 'help' to see what you can do next!`
+      );
+      return;
+    }
+
     // Handle pending confirmation responses
     if (pendingAction) {
       const response = cmd.trim().toLowerCase();
@@ -2559,6 +2568,8 @@ function MyDiary() {
   };
 
   const showHelp = () => {
+      addSystemMessage("═══ ABOUT MiD ═══");
+      addSystemMessage("  about mid");
     addSystemMessage("═══ CREATE MEMORIES ═══");
     addSystemMessage('  create memory: "Your text"');
     addSystemMessage('  create memory: #tag "Your text"');
