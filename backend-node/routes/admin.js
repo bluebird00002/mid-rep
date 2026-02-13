@@ -1,6 +1,24 @@
 import express from "express";
-import bcrypt from "bcrypt";
 import db from "../config/database.js";
+import { createRequire } from "module";
+
+// Use createRequire to allow conditional require of native bcrypt
+const require = createRequire(import.meta.url);
+let bcrypt;
+try {
+  // Prefer native bcrypt if available
+  bcrypt = require("bcrypt");
+} catch (e) {
+  // Fallback to bcryptjs which is pure JS and more likely available in restricted envs
+  try {
+    bcrypt = require("bcryptjs");
+    console.log("Using bcryptjs fallback for password hashing/comparison");
+  } catch (err) {
+    console.error("No bcrypt or bcryptjs available:", err);
+    // Re-throw so that the app startup or route import will surface an error clearly
+    throw err;
+  }
+}
 
 const router = express.Router();
 
