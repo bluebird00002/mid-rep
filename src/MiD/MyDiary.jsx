@@ -2588,7 +2588,6 @@ function MyDiary() {
     addSystemMessage("  show #tag1 #tag2");
     addSystemMessage("  show category: happy");
     addSystemMessage("  show pictures");
-    addSystemMessage("  show all tables");
     addSystemMessage("");
     addSystemMessage("═══ EDIT & DELETE ═══");
     addSystemMessage('  edit memory #id: "New content"');
