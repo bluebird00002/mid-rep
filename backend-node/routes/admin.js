@@ -29,6 +29,7 @@ router.post('/users/:id/reset-password', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 });
+
 const express = require('express');
 const bcrypt = require('bcrypt');
 const db = require('../config/database');
