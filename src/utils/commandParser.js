@@ -46,8 +46,13 @@ export class CommandParser {
       return this.parseDelete(command);
     }
 
-    // Search/Retrieve commands - allow "show all" and "show #tag" patterns
-    if (cmd === "show all" || cmd.match(/^show\s+#/)) {
+
+    // Search/Retrieve commands - allow "show all", "show #tag", and "show pictures"
+    if (
+      cmd === "show all" ||
+      cmd.match(/^show\s+#/) ||
+      cmd === "show pictures"
+    ) {
       return this.parseRetrieve(command);
     }
 
