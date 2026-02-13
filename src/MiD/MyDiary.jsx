@@ -81,6 +81,29 @@ function MyDiary() {
     historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Component-level handler for admin password input (used when adminLoginMode is true)
+  const handleAdminPasswordInput = async (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!adminPassword.trim()) return;
+      setAdminError(null);
+      try {
+        const res = await api.adminLogin({ password: adminPassword });
+        if (res && res.success) {
+          setAdminMode(true);
+          setAdminLoginMode(false);
+          setAdminPassword("");
+          setAdminError(null);
+          addSystemMessage("Admin login successful. Welcome, admin!");
+        } else {
+          setAdminError("Incorrect admin password.");
+        }
+      } catch (err) {
+        setAdminError("Admin login failed. Try again.");
+      }
+    }
+  };
+
   // Normalize common time inputs (keep colons in times like "9:00 AM")
   const normalizeTime = (input) => {
     if (!input) return "";
@@ -187,29 +210,6 @@ function MyDiary() {
 
     // Handle 'about mid' command
     if (cmd.trim().toLowerCase() === "about mid") {
-      // Handle admin password input
-      const handleAdminPasswordInput = async (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          if (!adminPassword.trim()) return;
-          setAdminError(null);
-          try {
-            // Call backend API to verify admin password
-            const res = await api.adminLogin({ password: adminPassword });
-            if (res && res.success) {
-              setAdminMode(true);
-              setAdminLoginMode(false);
-              setAdminPassword("");
-              setAdminError(null);
-              addSystemMessage("Admin login successful. Welcome, admin!");
-            } else {
-              setAdminError("Incorrect admin password.");
-            }
-          } catch (err) {
-            setAdminError("Admin login failed. Try again.");
-          }
-        }
-      };
       const username = user?.username || "User";
       addMotherMessage(
         `Hello, ${username}!\n\nWelcome to MiD (My Individual Diary) version 1.3. MiD is your personal, private digital diary designed to help you capture, organize, and reflect on your thoughts, memories, and daily experiences.\n\nWith MiD, you can easily create and manage text memories, tables, lists, timelines, and even save pictures. You can tag and categorize your entries, search and filter your memories, and keep everything organized in one secure place.\n\nMiD is built for simplicity and privacy, making it easy for you to record your life, ideas, and feelings in a way that suits you best. Only you have access to your diary, and you can interact with it using simple commands.\n\nType 'help' to see what you can do next!`,
