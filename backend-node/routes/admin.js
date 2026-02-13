@@ -1,12 +1,14 @@
+import express from "express";
+import bcrypt from "bcrypt";
+import db from "../config/database.js";
+
+const router = express.Router();
+
 // Delete a user by ID (permanent)
 router.delete("/users/:id", async (req, res) => {
   const userId = req.params.id;
   try {
-    // Delete user from users table
     await db.query("DELETE FROM users WHERE id = ?", [userId]);
-    // Optionally, delete related data (memories, images, etc.)
-    // await db.query('DELETE FROM memories WHERE user_id = ?', [userId]);
-    // await db.query('DELETE FROM images WHERE user_id = ?', [userId]);
     res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
     res
@@ -28,7 +30,6 @@ router.post("/users/:id/reset-password", async (req, res) => {
       });
   }
   try {
-    const bcrypt = require("bcrypt");
     const hash = await bcrypt.hash(newPassword, 10);
     await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [
       hash,
@@ -41,11 +42,6 @@ router.post("/users/:id/reset-password", async (req, res) => {
       .json({ success: false, message: "Server error", error: err.message });
   }
 });
-
-import express from "express";
-import bcrypt from "bcrypt";
-import db from "../config/database.js";
-const router = express.Router();
 
 // Admin login
 router.post("/login", async (req, res) => {
@@ -65,7 +61,6 @@ router.post("/login", async (req, res) => {
       return res
         .status(401)
         .json({ success: false, message: "Incorrect password" });
-    // You can add JWT or session logic here
     res.json({
       success: true,
       admin: { id: admin.id, username: admin.username },
