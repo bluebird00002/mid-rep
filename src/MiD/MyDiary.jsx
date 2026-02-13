@@ -2561,65 +2561,47 @@ function MyDiary() {
   const showHelp = () => {
     addSystemMessage("═══ CREATE MEMORIES ═══");
     addSystemMessage('  create memory: "Your text"');
-    addSystemMessage('  create memory: #work #ideas "Your text"');
+    addSystemMessage('  create memory: #tag "Your text"');
     addSystemMessage('  create memory: category: happy "Your text"');
-    addSystemMessage('  create memory: #work category: happy "Your text"');
     addSystemMessage("");
     addSystemMessage("═══ CREATE TABLE (Interactive) ═══");
-    addSystemMessage("  create table - Starts guided table creation");
-    addSystemMessage(
-      "    → Mother asks for: title, columns, rows, tags, category"
-    );
+    addSystemMessage("  create table");
+    addSystemMessage("    → Guided table creation");
     addSystemMessage("    → Type 'cancel' to abort at any step");
     addSystemMessage("");
     addSystemMessage("═══ CREATE LIST (Interactive) ═══");
-    addSystemMessage("  create list - Starts guided list creation");
-    addSystemMessage("    → Mother asks for: title, items, tags, category");
+    addSystemMessage("  create list");
+    addSystemMessage("    → Guided list creation");
     addSystemMessage("    → Type 'cancel' to abort at any step");
     addSystemMessage("");
     addSystemMessage("═══ CREATE TIMELINE (Interactive) ═══");
-    addSystemMessage("  create timeline - Starts guided timeline creation");
-    addSystemMessage("    → Mother asks for: title, events, tags, category");
+    addSystemMessage("  create timeline");
+    addSystemMessage("    → Guided timeline creation");
     addSystemMessage("    → Type 'cancel' to abort at any step");
-    addSystemMessage(
-      "    → Format for events: TIME - DESCRIPTION (e.g., '9:00 AM - Wake up')"
-    );
     addSystemMessage("");
     addSystemMessage("═══ SAVE IMAGES ═══");
-    addSystemMessage("  save picture - Opens file picker to upload image");
+    addSystemMessage("  save picture");
     addSystemMessage("");
     addSystemMessage("═══ RETRIEVE MEMORIES ═══");
-    addSystemMessage("  show all - Retrieve all memories and images");
-    addSystemMessage("  show #tag - Memories tagged with 'tag'");
-    addSystemMessage("  show #tag1 #tag2 - Memories with any of these tags");
-    addSystemMessage("  show tags: work - Memories tagged with 'work'");
-    addSystemMessage(
-      "  show tags: work, ideas - Memories with any of these tags"
-    );
-    addSystemMessage("  show category: happy - All in category 'happy'");
-    addSystemMessage("  show pictures - All images only");
-    addSystemMessage("  show all tables - All table memories");
-    addSystemMessage(
-      "  Mother, show happy moments - Natural language retrieval"
-    );
+    addSystemMessage("  show all");
+    addSystemMessage("  show #tag");
+    addSystemMessage("  show #tag1 #tag2");
+    addSystemMessage("  show category: happy");
+    addSystemMessage("  show pictures");
+    addSystemMessage("  show all tables");
     addSystemMessage("");
     addSystemMessage("═══ EDIT & DELETE ═══");
-    addSystemMessage('  edit memory #12: "New content" - Update memory text');
-    addSystemMessage(
-      "  edit memory #12 - For tables/lists: opens interactive editor"
-    );
-    addSystemMessage("  delete memory #12 - Delete single memory");
-    addSystemMessage("  delete picture #5 - Delete single image");
-    addSystemMessage("  delete image #5 - Same as delete picture");
-    addSystemMessage(
-      "  delete all - Delete ALL memories (asks for confirmation)"
-    );
-    addSystemMessage("  delete memories tags: work - Delete all tagged 'work'");
-    addSystemMessage("  delete memories category: happy - Delete in category");
+    addSystemMessage('  edit memory #id: "New content"');
+    addSystemMessage("  delete memory #id");
+    addSystemMessage("  delete picture #id");
+    addSystemMessage("  delete image #id");
+    addSystemMessage("  delete all");
+    addSystemMessage("  delete memories tags: tag");
+    addSystemMessage("  delete memories category: happy");
     addSystemMessage("");
     addSystemMessage("═══ OTHER ═══");
-    addSystemMessage("  clear - Clear terminal screen");
-    addSystemMessage("  help - Show this help (what you're reading)");
+    addSystemMessage("  clear");
+    addSystemMessage("  help");
   };
 
   // Local storage fallback functions
