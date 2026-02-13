@@ -2568,8 +2568,8 @@ function MyDiary() {
   };
 
   const showHelp = () => {
-      addSystemMessage("═══ ABOUT MiD ═══");
-      addSystemMessage("  about mid");
+    addSystemMessage("═══ ABOUT MiD ═══");
+    addSystemMessage("  about mid");
     addSystemMessage("═══ CREATE MEMORIES ═══");
     addSystemMessage('  create memory: "Your text"');
     addSystemMessage('  create memory: #tag "Your text"');
