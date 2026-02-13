@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import api from "../../services/api";
 import "./PasswordPanel.css";
@@ -26,7 +25,11 @@ export default function PasswordPanel() {
     }
     setLoading(true);
     try {
-      const res = await api.changeAdminPassword({ username, oldPassword, newPassword });
+      const res = await api.changeAdminPassword({
+        username,
+        oldPassword,
+        newPassword,
+      });
       if (res.success) {
         setSuccess("Password changed successfully.");
         setOldPassword("");
@@ -48,21 +51,43 @@ export default function PasswordPanel() {
       <form className="password-form" onSubmit={handleSubmit}>
         <div className="password-form-group">
           <label>Admin Username</label>
-          <input type="text" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" />
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
         </div>
         <div className="password-form-group">
           <label>Old Password</label>
-          <input type="password" value={oldPassword} onChange={e => setOldPassword(e.target.value)} autoComplete="current-password" />
+          <input
+            type="password"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            autoComplete="current-password"
+          />
         </div>
         <div className="password-form-group">
           <label>New Password</label>
-          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} autoComplete="new-password" />
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+          />
         </div>
         <div className="password-form-group">
           <label>Confirm New Password</label>
-          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
         </div>
-        <button className="password-form-btn" type="submit" disabled={loading}>{loading ? "Changing..." : "Change Password"}</button>
+        <button className="password-form-btn" type="submit" disabled={loading}>
+          {loading ? "Changing..." : "Change Password"}
+        </button>
         {error && <div className="password-form-error">{error}</div>}
         {success && <div className="password-form-success">{success}</div>}
       </form>

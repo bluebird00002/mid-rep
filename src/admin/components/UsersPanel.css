@@ -37,9 +37,10 @@
   border-radius: 8px;
   overflow: hidden;
   margin-top: 1rem;
-  box-shadow: 0 1px 8px 0 rgba(0,0,0,0.06);
+  box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.06);
 }
-.users-table th, .users-table td {
+.users-table th,
+.users-table td {
   padding: 0.7rem 1rem;
   text-align: left;
 }
@@ -91,7 +92,9 @@
   font-size: 0.95rem;
   margin-right: 0.2rem;
 }
-.users-loading, .users-error, .users-action-msg {
+.users-loading,
+.users-error,
+.users-action-msg {
   margin: 1rem 0;
   color: var(--mid-accent, #7ec4fa);
 }

@@ -187,32 +187,32 @@ function MyDiary() {
 
     // Handle 'about mid' command
     if (cmd.trim().toLowerCase() === "about mid") {
-        // Handle admin password input
-        const handleAdminPasswordInput = async (e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (!adminPassword.trim()) return;
-            setAdminError(null);
-            try {
-              // Call backend API to verify admin password
-              const res = await api.adminLogin({ password: adminPassword });
-              if (res && res.success) {
-                setAdminMode(true);
-                setAdminLoginMode(false);
-                setAdminPassword("");
-                setAdminError(null);
-                addSystemMessage("Admin login successful. Welcome, admin!");
-              } else {
-                setAdminError("Incorrect admin password.");
-              }
-            } catch (err) {
-              setAdminError("Admin login failed. Try again.");
+      // Handle admin password input
+      const handleAdminPasswordInput = async (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (!adminPassword.trim()) return;
+          setAdminError(null);
+          try {
+            // Call backend API to verify admin password
+            const res = await api.adminLogin({ password: adminPassword });
+            if (res && res.success) {
+              setAdminMode(true);
+              setAdminLoginMode(false);
+              setAdminPassword("");
+              setAdminError(null);
+              addSystemMessage("Admin login successful. Welcome, admin!");
+            } else {
+              setAdminError("Incorrect admin password.");
             }
+          } catch (err) {
+            setAdminError("Admin login failed. Try again.");
           }
-        };
+        }
+      };
       const username = user?.username || "User";
       addMotherMessage(
-        `Hello, ${username}!\n\nWelcome to MiD (My Individual Diary) version 1.3. MiD is your personal, private digital diary designed to help you capture, organize, and reflect on your thoughts, memories, and daily experiences.\n\nWith MiD, you can easily create and manage text memories, tables, lists, timelines, and even save pictures. You can tag and categorize your entries, search and filter your memories, and keep everything organized in one secure place.\n\nMiD is built for simplicity and privacy, making it easy for you to record your life, ideas, and feelings in a way that suits you best. Only you have access to your diary, and you can interact with it using simple commands.\n\nType 'help' to see what you can do next!`
+        `Hello, ${username}!\n\nWelcome to MiD (My Individual Diary) version 1.3. MiD is your personal, private digital diary designed to help you capture, organize, and reflect on your thoughts, memories, and daily experiences.\n\nWith MiD, you can easily create and manage text memories, tables, lists, timelines, and even save pictures. You can tag and categorize your entries, search and filter your memories, and keep everything organized in one secure place.\n\nMiD is built for simplicity and privacy, making it easy for you to record your life, ideas, and feelings in a way that suits you best. Only you have access to your diary, and you can interact with it using simple commands.\n\nType 'help' to see what you can do next!`,
       );
       return;
     }
@@ -284,7 +284,7 @@ function MyDiary() {
       // Check if command is unknown
       if (parsed.type === "unknown") {
         addSystemMessage(
-          `Unknown command: "${cmd}". Type 'help' to see available commands.`
+          `Unknown command: "${cmd}". Type 'help' to see available commands.`,
         );
         return;
       }
@@ -358,7 +358,7 @@ function MyDiary() {
         default:
           // Unknown command type - show error
           addSystemMessage(
-            `Unknown command: "${cmd}". Type 'help' to see available commands.`
+            `Unknown command: "${cmd}". Type 'help' to see available commands.`,
           );
       }
     } catch (err) {
@@ -389,7 +389,7 @@ function MyDiary() {
         if (parsed.tags?.length) msg += ` Tags: ${parsed.tags.join(", ")}.`;
         if (parsed.category) msg += ` Category: ${parsed.category}.`;
         addMotherMessage(msg);
-        
+
         // Display only the newly created memory
         const apiMemory = result.data || result.memory || result;
         const newMemory = {
@@ -449,7 +449,7 @@ function MyDiary() {
       },
     });
     addMotherMessage(
-      "Let's create a table! First, what's the title/heading for this table? (or type 'skip' to skip)"
+      "Let's create a table! First, what's the title/heading for this table? (or type 'skip' to skip)",
     );
   };
 
@@ -473,7 +473,7 @@ function MyDiary() {
           data: { ...tableBuilder.data, title },
         });
         addMotherMessage(
-          "Enter column names separated by commas (e.g., Name, Age, City):"
+          "Enter column names separated by commas (e.g., Name, Age, City):",
         );
         break;
 
@@ -493,7 +493,7 @@ function MyDiary() {
         });
         addMotherMessage(`Columns: ${columns.join(" | ")}`);
         addMotherMessage(
-          `Now enter row data. Each row should have ${columns.length} values separated by commas.`
+          `Now enter row data. Each row should have ${columns.length} values separated by commas.`,
         );
         addMotherMessage("Type 'done' when finished adding rows.");
         break;
@@ -509,7 +509,7 @@ function MyDiary() {
             step: "tags",
           });
           addMotherMessage(
-            "Add tags for this table (comma-separated, or 'skip'):"
+            "Add tags for this table (comma-separated, or 'skip'):",
           );
           return;
         }
@@ -517,7 +517,7 @@ function MyDiary() {
         const rowValues = trimmedInput.split(",").map((v) => v.trim());
         if (rowValues.length !== tableBuilder.data.columns.length) {
           addSystemMessage(
-            `Row should have ${tableBuilder.data.columns.length} values (you entered ${rowValues.length}). Try again:`
+            `Row should have ${tableBuilder.data.columns.length} values (you entered ${rowValues.length}). Try again:`,
           );
           return;
         }
@@ -528,7 +528,7 @@ function MyDiary() {
           data: { ...tableBuilder.data, rows: newRows },
         });
         addMotherMessage(
-          `Row ${newRows.length} added: ${rowValues.join(" | ")}`
+          `Row ${newRows.length} added: ${rowValues.join(" | ")}`,
         );
         addSystemMessage("Enter next row or type 'done' to finish:");
         break;
@@ -570,7 +570,7 @@ function MyDiary() {
             successMsg += ` Tags: ${tableBuilder.data.tags.join(", ")}.`;
           if (category) successMsg += ` Category: ${category}.`;
           addMotherMessage(successMsg);
-          
+
           // Display only the newly created table
           const newMemory = result.data || result.memory || result;
           setMemories([newMemory]);
@@ -606,7 +606,7 @@ function MyDiary() {
       },
     });
     addMotherMessage(
-      "Let's create a list! First, what's the title for this list? (or type 'skip')"
+      "Let's create a list! First, what's the title for this list? (or type 'skip')",
     );
   };
 
@@ -644,7 +644,7 @@ function MyDiary() {
             step: "tags",
           });
           addMotherMessage(
-            "Add tags for this list (comma-separated, or 'skip'):"
+            "Add tags for this list (comma-separated, or 'skip'):",
           );
           return;
         }
@@ -736,7 +736,7 @@ function MyDiary() {
       },
     });
     addMotherMessage(
-      "Let's create a timeline! First, what's the title for this timeline? (or type 'skip')"
+      "Let's create a timeline! First, what's the title for this timeline? (or type 'skip')",
     );
   };
 
@@ -761,7 +761,7 @@ function MyDiary() {
         }));
         addMotherMessage("Now add your timeline events.");
         addSystemMessage(
-          "Format: TIME - DESCRIPTION (e.g., '9:00 AM - Wake up' or just 'Morning - Wake up')"
+          "Format: TIME - DESCRIPTION (e.g., '9:00 AM - Wake up' or just 'Morning - Wake up')",
         );
         addSystemMessage("Type 'done' when finished adding events.");
         break;
@@ -777,7 +777,7 @@ function MyDiary() {
             step: "tags",
           }));
           addMotherMessage(
-            "Add tags for this timeline (comma-separated, or 'skip'):"
+            "Add tags for this timeline (comma-separated, or 'skip'):",
           );
           return;
         }
@@ -1078,10 +1078,10 @@ function MyDiary() {
         setImageBuilder({ ...imageBuilder, step: "confirm" });
         addMotherMessage("Ready to upload the image with the following:");
         addSystemMessage(
-          `  Description: ${imageBuilder.data.description || "(none)"}`
+          `  Description: ${imageBuilder.data.description || "(none)"}`,
         );
         addSystemMessage(
-          `  Tags: ${imageBuilder.data.tags.join(", ") || "(none)"}`
+          `  Tags: ${imageBuilder.data.tags.join(", ") || "(none)"}`,
         );
         addSystemMessage(`  Album: ${imageBuilder.data.album || "(none)"}`);
         addSystemMessage("Type 'save' to upload or 'cancel' to abort.");
@@ -1093,7 +1093,7 @@ function MyDiary() {
             imageBuilder.data.file || imageFile,
             imageBuilder.data.description,
             imageBuilder.data.tags,
-            imageBuilder.data.album
+            imageBuilder.data.album,
           );
         } else {
           // remove preview memory if present
@@ -1163,7 +1163,7 @@ function MyDiary() {
 
   const startImageEditor = (memory) => {
     addMotherMessage(
-      `Editing Image #${memory.id}: "${memory.description || "Untitled"}"`
+      `Editing Image #${memory.id}: "${memory.description || "Untitled"}"`,
     );
     addSystemMessage("What would you like to edit?");
     addSystemMessage("  1. Description");
@@ -1204,7 +1204,7 @@ function MyDiary() {
         // Use updateImage for image type, not updateMemory
         await api.updateImage(imageBuilder.memory.id, updates);
         addMotherMessage(
-          `Image #${imageBuilder.memory.id} updated successfully.`
+          `Image #${imageBuilder.memory.id} updated successfully.`,
         );
         setImageBuilder(null);
         await loadMemories();
@@ -1221,22 +1221,22 @@ function MyDiary() {
           addMotherMessage(
             `Current description: "${
               imageBuilder.data.description || "(none)"
-            }"`
+            }"`,
           );
           addSystemMessage("Enter new description:");
         } else if (lower === "2" || lower === "tags") {
           setImageBuilder({ ...imageBuilder, step: "edit_tags" });
           addMotherMessage(
-            `Current tags: ${imageBuilder.data.tags.join(", ") || "(none)"}`
+            `Current tags: ${imageBuilder.data.tags.join(", ") || "(none)"}`,
           );
           addSystemMessage("Enter new tags (comma-separated) or 'clear':");
         } else if (lower === "3" || lower === "view") {
           addMotherMessage(`Image #${imageBuilder.memory.id}:`);
           addSystemMessage(
-            `  Description: ${imageBuilder.data.description || "(none)"}`
+            `  Description: ${imageBuilder.data.description || "(none)"}`,
           );
           addSystemMessage(
-            `  Tags: ${imageBuilder.data.tags.join(", ") || "(none)"}`
+            `  Tags: ${imageBuilder.data.tags.join(", ") || "(none)"}`,
           );
           addSystemMessage("─────────────────────");
           addSystemMessage("What would you like to edit?");
@@ -1303,7 +1303,7 @@ function MyDiary() {
     });
 
     addMotherMessage(
-      `Editing Table #${memory.id}: "${memory.content || "Untitled"}"`
+      `Editing Table #${memory.id}: "${memory.content || "Untitled"}"`,
     );
     showTableEditorMenu();
   };
@@ -1389,7 +1389,7 @@ function MyDiary() {
         const addValues = trimmedInput.split(",").map((v) => v.trim());
         if (addValues.length !== tableEditor.data.columns.length) {
           addSystemMessage(
-            `Row should have ${tableEditor.data.columns.length} values (you entered ${addValues.length}). Try again:`
+            `Row should have ${tableEditor.data.columns.length} values (you entered ${addValues.length}). Try again:`,
           );
           return;
         }
@@ -1400,7 +1400,7 @@ function MyDiary() {
           data: { ...tableEditor.data, rows: rowsWithNew },
         });
         addMotherMessage(
-          `Row ${rowsWithNew.length} added: ${addValues.join(" | ")}`
+          `Row ${rowsWithNew.length} added: ${addValues.join(" | ")}`,
         );
         showTableEditorMenu();
         break;
@@ -1413,7 +1413,7 @@ function MyDiary() {
           editRowNum > tableEditor.data.rows.length
         ) {
           addSystemMessage(
-            `Please enter a valid row number (1-${tableEditor.data.rows.length}):`
+            `Please enter a valid row number (1-${tableEditor.data.rows.length}):`,
           );
           return;
         }
@@ -1424,10 +1424,10 @@ function MyDiary() {
         });
         const currentRow = tableEditor.data.rows[editRowNum - 1];
         addMotherMessage(
-          `Current row ${editRowNum}: ${currentRow.join(" | ")}`
+          `Current row ${editRowNum}: ${currentRow.join(" | ")}`,
         );
         addSystemMessage(
-          `Enter new values (${tableEditor.data.columns.length} values, comma-separated):`
+          `Enter new values (${tableEditor.data.columns.length} values, comma-separated):`,
         );
         break;
 
@@ -1435,7 +1435,7 @@ function MyDiary() {
         const editValues = trimmedInput.split(",").map((v) => v.trim());
         if (editValues.length !== tableEditor.data.columns.length) {
           addSystemMessage(
-            `Row should have ${tableEditor.data.columns.length} values. Try again:`
+            `Row should have ${tableEditor.data.columns.length} values. Try again:`,
           );
           return;
         }
@@ -1449,8 +1449,8 @@ function MyDiary() {
         });
         addMotherMessage(
           `Row ${tableEditor.editingRowIndex + 1} updated: ${editValues.join(
-            " | "
-          )}`
+            " | ",
+          )}`,
         );
         showTableEditorMenu();
         break;
@@ -1463,12 +1463,12 @@ function MyDiary() {
           deleteRowNum > tableEditor.data.rows.length
         ) {
           addSystemMessage(
-            `Please enter a valid row number (1-${tableEditor.data.rows.length}):`
+            `Please enter a valid row number (1-${tableEditor.data.rows.length}):`,
           );
           return;
         }
         const rowsAfterDelete = tableEditor.data.rows.filter(
-          (_, i) => i !== deleteRowNum - 1
+          (_, i) => i !== deleteRowNum - 1,
         );
         setTableEditor({
           ...tableEditor,
@@ -1476,7 +1476,7 @@ function MyDiary() {
           data: { ...tableEditor.data, rows: rowsAfterDelete },
         });
         addMotherMessage(
-          `Row ${deleteRowNum} deleted. ${rowsAfterDelete.length} rows remaining.`
+          `Row ${deleteRowNum} deleted. ${rowsAfterDelete.length} rows remaining.`,
         );
         showTableEditorMenu();
         break;
@@ -1497,7 +1497,7 @@ function MyDiary() {
         addMotherMessage(
           newTags.length
             ? `Tags updated: ${newTags.join(", ")}`
-            : "Tags cleared."
+            : "Tags cleared.",
         );
         showTableEditorMenu();
         break;
@@ -1510,7 +1510,9 @@ function MyDiary() {
           data: { ...tableEditor.data, category: newCategory },
         });
         addMotherMessage(
-          newCategory ? `Category updated: ${newCategory}` : "Category cleared."
+          newCategory
+            ? `Category updated: ${newCategory}`
+            : "Category cleared.",
         );
         showTableEditorMenu();
         break;
@@ -1527,7 +1529,7 @@ function MyDiary() {
       case "title":
         setTableEditor({ ...tableEditor, step: "title" });
         addMotherMessage(
-          `Current title: "${tableEditor.data.title || "(none)"}"`
+          `Current title: "${tableEditor.data.title || "(none)"}"`,
         );
         addSystemMessage("Enter new title:");
         break;
@@ -1536,7 +1538,7 @@ function MyDiary() {
       case "columns":
         setTableEditor({ ...tableEditor, step: "columns" });
         addMotherMessage(
-          `Current columns: ${tableEditor.data.columns.join(" | ") || "(none)"}`
+          `Current columns: ${tableEditor.data.columns.join(" | ") || "(none)"}`,
         );
         addSystemMessage("Enter new column names (comma-separated):");
         break;
@@ -1550,7 +1552,7 @@ function MyDiary() {
         }
         setTableEditor({ ...tableEditor, step: "add_row" });
         addSystemMessage(
-          `Enter row values (${tableEditor.data.columns.length} values, comma-separated):`
+          `Enter row values (${tableEditor.data.columns.length} values, comma-separated):`,
         );
         addSystemMessage(`Columns: ${tableEditor.data.columns.join(" | ")}`);
         break;
@@ -1589,10 +1591,10 @@ function MyDiary() {
       case "tags":
         setTableEditor({ ...tableEditor, step: "tags" });
         addMotherMessage(
-          `Current tags: ${tableEditor.data.tags.join(", ") || "(none)"}`
+          `Current tags: ${tableEditor.data.tags.join(", ") || "(none)"}`,
         );
         addSystemMessage(
-          "Enter new tags (comma-separated) or 'clear' to remove all:"
+          "Enter new tags (comma-separated) or 'clear' to remove all:",
         );
         break;
 
@@ -1600,7 +1602,7 @@ function MyDiary() {
       case "category":
         setTableEditor({ ...tableEditor, step: "category" });
         addMotherMessage(
-          `Current category: ${tableEditor.data.category || "(none)"}`
+          `Current category: ${tableEditor.data.category || "(none)"}`,
         );
         addSystemMessage("Enter new category or 'clear' to remove:");
         break;
@@ -1612,7 +1614,7 @@ function MyDiary() {
 
       default:
         addSystemMessage(
-          "Invalid option. Please enter 1-8, 'save', or 'cancel'."
+          "Invalid option. Please enter 1-8, 'save', or 'cancel'.",
         );
     }
   };
@@ -1621,7 +1623,7 @@ function MyDiary() {
     addMotherMessage(`═══ Table Preview ═══`);
     addMotherMessage(`Title: ${tableEditor.data.title || "(none)"}`);
     addMotherMessage(
-      `Columns: ${tableEditor.data.columns.join(" | ") || "(none)"}`
+      `Columns: ${tableEditor.data.columns.join(" | ") || "(none)"}`,
     );
     if (tableEditor.data.rows.length > 0) {
       addMotherMessage("Rows:");
@@ -1673,7 +1675,7 @@ function MyDiary() {
     });
 
     addMotherMessage(
-      `Editing List #${memory.id}: "${memory.content || "Untitled"}"`
+      `Editing List #${memory.id}: "${memory.content || "Untitled"}"`,
     );
     showListEditorMenu();
   };
@@ -1743,7 +1745,7 @@ function MyDiary() {
           editItemNum > listEditor.data.items.length
         ) {
           addSystemMessage(
-            `Please enter a valid item number (1-${listEditor.data.items.length}):`
+            `Please enter a valid item number (1-${listEditor.data.items.length}):`,
           );
           return;
         }
@@ -1753,7 +1755,7 @@ function MyDiary() {
           editingItemIndex: editItemNum - 1,
         });
         addMotherMessage(
-          `Current: "${listEditor.data.items[editItemNum - 1]}"`
+          `Current: "${listEditor.data.items[editItemNum - 1]}"`,
         );
         addSystemMessage("Enter new text for this item:");
         break;
@@ -1770,7 +1772,7 @@ function MyDiary() {
         addMotherMessage(
           `Item ${
             listEditor.editingItemIndex + 1
-          } updated to: "${trimmedInput}"`
+          } updated to: "${trimmedInput}"`,
         );
         showListEditorMenu();
         break;
@@ -1783,12 +1785,12 @@ function MyDiary() {
           deleteItemNum > listEditor.data.items.length
         ) {
           addSystemMessage(
-            `Please enter a valid item number (1-${listEditor.data.items.length}):`
+            `Please enter a valid item number (1-${listEditor.data.items.length}):`,
           );
           return;
         }
         const itemsAfterDelete = listEditor.data.items.filter(
-          (_, i) => i !== deleteItemNum - 1
+          (_, i) => i !== deleteItemNum - 1,
         );
         setListEditor({
           ...listEditor,
@@ -1796,7 +1798,7 @@ function MyDiary() {
           data: { ...listEditor.data, items: itemsAfterDelete },
         });
         addMotherMessage(
-          `Item ${deleteItemNum} deleted. ${itemsAfterDelete.length} items remaining.`
+          `Item ${deleteItemNum} deleted. ${itemsAfterDelete.length} items remaining.`,
         );
         showListEditorMenu();
         break;
@@ -1844,7 +1846,7 @@ function MyDiary() {
         addMotherMessage(
           newTags.length
             ? `Tags updated: ${newTags.join(", ")}`
-            : "Tags cleared."
+            : "Tags cleared.",
         );
         showListEditorMenu();
         break;
@@ -1857,7 +1859,9 @@ function MyDiary() {
           data: { ...listEditor.data, category: newCategory },
         });
         addMotherMessage(
-          newCategory ? `Category updated: ${newCategory}` : "Category cleared."
+          newCategory
+            ? `Category updated: ${newCategory}`
+            : "Category cleared.",
         );
         showListEditorMenu();
         break;
@@ -1874,7 +1878,7 @@ function MyDiary() {
       case "title":
         setListEditor({ ...listEditor, step: "title" });
         addMotherMessage(
-          `Current title: "${listEditor.data.title || "(none)"}"`
+          `Current title: "${listEditor.data.title || "(none)"}"`,
         );
         addSystemMessage("Enter new title:");
         break;
@@ -1935,10 +1939,10 @@ function MyDiary() {
       case "tags":
         setListEditor({ ...listEditor, step: "tags" });
         addMotherMessage(
-          `Current tags: ${listEditor.data.tags.join(", ") || "(none)"}`
+          `Current tags: ${listEditor.data.tags.join(", ") || "(none)"}`,
         );
         addSystemMessage(
-          "Enter new tags (comma-separated) or 'clear' to remove all:"
+          "Enter new tags (comma-separated) or 'clear' to remove all:",
         );
         break;
 
@@ -1946,7 +1950,7 @@ function MyDiary() {
       case "category":
         setListEditor({ ...listEditor, step: "category" });
         addMotherMessage(
-          `Current category: ${listEditor.data.category || "(none)"}`
+          `Current category: ${listEditor.data.category || "(none)"}`,
         );
         addSystemMessage("Enter new category or 'clear' to remove:");
         break;
@@ -1958,7 +1962,7 @@ function MyDiary() {
 
       default:
         addSystemMessage(
-          "Invalid option. Please enter 1-8, 'save', or 'cancel'."
+          "Invalid option. Please enter 1-8, 'save', or 'cancel'.",
         );
     }
   };
@@ -2015,7 +2019,7 @@ function MyDiary() {
     });
 
     addMotherMessage(
-      `Editing Timeline #${memory.id}: "${memory.content || "Untitled"}"`
+      `Editing Timeline #${memory.id}: "${memory.content || "Untitled"}"`,
     );
     showTimelineEditorMenu();
   };
@@ -2097,7 +2101,7 @@ function MyDiary() {
           editEventNum > timelineEditor.data.events.length
         ) {
           addSystemMessage(
-            `Please enter a valid event number (1-${timelineEditor.data.events.length}):`
+            `Please enter a valid event number (1-${timelineEditor.data.events.length}):`,
           );
           return;
         }
@@ -2112,7 +2116,7 @@ function MyDiary() {
           : currentEvent.description;
         addMotherMessage(`Current: "${currentDisplay}"`);
         addSystemMessage(
-          "Enter new event (TIME - DESCRIPTION or just DESCRIPTION):"
+          "Enter new event (TIME - DESCRIPTION or just DESCRIPTION):",
         );
         break;
 
@@ -2137,7 +2141,7 @@ function MyDiary() {
           editingEventIndex: undefined,
         });
         addMotherMessage(
-          `Event ${timelineEditor.editingEventIndex + 1} updated.`
+          `Event ${timelineEditor.editingEventIndex + 1} updated.`,
         );
         showTimelineEditorMenu();
         break;
@@ -2150,12 +2154,12 @@ function MyDiary() {
           deleteEventNum > timelineEditor.data.events.length
         ) {
           addSystemMessage(
-            `Please enter a valid event number (1-${timelineEditor.data.events.length}):`
+            `Please enter a valid event number (1-${timelineEditor.data.events.length}):`,
           );
           return;
         }
         const eventsAfterDelete = timelineEditor.data.events.filter(
-          (_, i) => i !== deleteEventNum - 1
+          (_, i) => i !== deleteEventNum - 1,
         );
         setTimelineEditor({
           ...timelineEditor,
@@ -2163,7 +2167,7 @@ function MyDiary() {
           data: { ...timelineEditor.data, events: eventsAfterDelete },
         });
         addMotherMessage(
-          `Event ${deleteEventNum} deleted. ${eventsAfterDelete.length} events remaining.`
+          `Event ${deleteEventNum} deleted. ${eventsAfterDelete.length} events remaining.`,
         );
         showTimelineEditorMenu();
         break;
@@ -2211,7 +2215,7 @@ function MyDiary() {
         addMotherMessage(
           newTags.length
             ? `Tags updated: ${newTags.join(", ")}`
-            : "Tags cleared."
+            : "Tags cleared.",
         );
         showTimelineEditorMenu();
         break;
@@ -2224,7 +2228,9 @@ function MyDiary() {
           data: { ...timelineEditor.data, category: newCategory },
         });
         addMotherMessage(
-          newCategory ? `Category updated: ${newCategory}` : "Category cleared."
+          newCategory
+            ? `Category updated: ${newCategory}`
+            : "Category cleared.",
         );
         showTimelineEditorMenu();
         break;
@@ -2241,7 +2247,7 @@ function MyDiary() {
       case "title":
         setTimelineEditor({ ...timelineEditor, step: "title" });
         addMotherMessage(
-          `Current title: "${timelineEditor.data.title || "(none)"}"`
+          `Current title: "${timelineEditor.data.title || "(none)"}"`,
         );
         addSystemMessage("Enter new title:");
         break;
@@ -2251,7 +2257,7 @@ function MyDiary() {
       case "add event":
         setTimelineEditor({ ...timelineEditor, step: "add_event" });
         addSystemMessage(
-          "Enter the new event (TIME - DESCRIPTION or just DESCRIPTION):"
+          "Enter the new event (TIME - DESCRIPTION or just DESCRIPTION):",
         );
         break;
 
@@ -2313,10 +2319,10 @@ function MyDiary() {
       case "tags":
         setTimelineEditor({ ...timelineEditor, step: "tags" });
         addMotherMessage(
-          `Current tags: ${timelineEditor.data.tags.join(", ") || "(none)"}`
+          `Current tags: ${timelineEditor.data.tags.join(", ") || "(none)"}`,
         );
         addSystemMessage(
-          "Enter new tags (comma-separated) or 'clear' to remove all:"
+          "Enter new tags (comma-separated) or 'clear' to remove all:",
         );
         break;
 
@@ -2324,7 +2330,7 @@ function MyDiary() {
       case "category":
         setTimelineEditor({ ...timelineEditor, step: "category" });
         addMotherMessage(
-          `Current category: ${timelineEditor.data.category || "(none)"}`
+          `Current category: ${timelineEditor.data.category || "(none)"}`,
         );
         addSystemMessage("Enter new category or 'clear' to remove:");
         break;
@@ -2336,7 +2342,7 @@ function MyDiary() {
 
       default:
         addSystemMessage(
-          "Invalid option. Please enter 1-8, 'save', or 'cancel'."
+          "Invalid option. Please enter 1-8, 'save', or 'cancel'.",
         );
     }
   };
@@ -2356,7 +2362,7 @@ function MyDiary() {
       addSystemMessage("  (no events)");
     }
     addMotherMessage(
-      `Tags: ${timelineEditor.data.tags.join(", ") || "(none)"}`
+      `Tags: ${timelineEditor.data.tags.join(", ") || "(none)"}`,
     );
     addMotherMessage(`Category: ${timelineEditor.data.category || "(none)"}`);
     addSystemMessage("─────────────────────");
@@ -2374,7 +2380,7 @@ function MyDiary() {
 
       await api.updateMemory(timelineEditor.memory.id, updates);
       addMotherMessage(
-        `Timeline #${timelineEditor.memory.id} updated successfully!`
+        `Timeline #${timelineEditor.memory.id} updated successfully!`,
       );
       setTimelineEditor(null);
       await loadMemories();
@@ -2392,7 +2398,7 @@ function MyDiary() {
         "Are you sure you want to DELETE ALL memories? This cannot be undone! (yes/no)";
     } else if (parsed.filters?.tags?.length) {
       confirmMsg = `Are you sure you want to delete all memories with tags: ${parsed.filters.tags.join(
-        ", "
+        ", ",
       )}? (yes/no)`;
     } else if (parsed.filters?.category) {
       confirmMsg = `Are you sure you want to delete all memories in category: ${parsed.filters.category}? (yes/no)`;
@@ -2400,7 +2406,7 @@ function MyDiary() {
       confirmMsg = `Are you sure you want to delete ${parsed.target} #${parsed.id}? (yes/no)`;
     } else {
       addSystemMessage(
-        "Please specify: delete memory #12, delete all, delete memories tags: work, or delete memories category: happy"
+        "Please specify: delete memory #12, delete all, delete memories tags: work, or delete memories category: happy",
       );
       return;
     }
@@ -2425,8 +2431,8 @@ function MyDiary() {
             (m) =>
               m.id !== parsed.id &&
               m.id !== localMem?.image_id &&
-              m.id !== localMem?.tempId
-          )
+              m.id !== localMem?.tempId,
+          ),
         );
       }
 
@@ -2478,7 +2484,7 @@ function MyDiary() {
         }
 
         addMotherMessage(
-          `${parsed.target} #${parsed.id} deleted successfully.`
+          `${parsed.target} #${parsed.id} deleted successfully.`,
         );
         await loadMemories();
       }
@@ -2487,7 +2493,7 @@ function MyDiary() {
       if (parsed.id) {
         deleteFromLocalStorage(parsed.id);
         addMotherMessage(
-          `${parsed.target} #${parsed.id} deleted successfully.`
+          `${parsed.target} #${parsed.id} deleted successfully.`,
         );
         await loadMemories();
       } else {
@@ -2521,7 +2527,7 @@ function MyDiary() {
       if (parsed.filters.search) {
         const results = await api.searchMemories(
           parsed.filters.search,
-          apiFilters
+          apiFilters,
         );
         let memories = results.data?.memories || results.memories || [];
         // also try fetching images that match filters
@@ -2550,7 +2556,7 @@ function MyDiary() {
             addSystemMessage(
               `  #${mem.id}: ${
                 mem.content || mem.description || String(mem.id)
-              }`
+              }`,
             );
           });
         } else {
@@ -2674,7 +2680,7 @@ function MyDiary() {
 
     if (filters.tags) {
       filtered = filtered.filter((m) =>
-        filters.tags.some((tag) => m.tags?.includes(tag))
+        filters.tags.some((tag) => m.tags?.includes(tag)),
       );
     }
 
@@ -2687,7 +2693,7 @@ function MyDiary() {
       filtered = filtered.filter(
         (m) =>
           m.content?.toLowerCase().includes(searchLower) ||
-          m.description?.toLowerCase().includes(searchLower)
+          m.description?.toLowerCase().includes(searchLower),
       );
     }
 
@@ -2986,9 +2992,7 @@ function MyDiary() {
             <div className="terminal-input-inline">
               <div className="input-prompt">
                 <span className="prompt-text">
-                  {adminLoginMode
-                    ? "Admin"
-                    : user?.username || "User"}
+                  {adminLoginMode ? "Admin" : user?.username || "User"}
                   <ChevronRight size={16} />
                 </span>
                 {adminLoginMode ? (

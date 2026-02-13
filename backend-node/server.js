@@ -19,7 +19,7 @@ dotenv.config();
 if (!process.env.JWT_SECRET) {
   console.warn("⚠️  WARNING: JWT_SECRET not set in .env file!");
   console.warn(
-    "⚠️  Using default development secret. Change this in production!"
+    "⚠️  Using default development secret. Change this in production!",
   );
   process.env.JWT_SECRET =
     "mid-development-secret-key-change-in-production-2024";
@@ -46,7 +46,7 @@ if (allowedOrigins.length === 0) {
   allowedOrigins.push(
     "http://localhost:5173",
     "http://localhost:3001",
-    "http://localhost:5174"
+    "http://localhost:5174",
   );
 }
 
@@ -72,7 +72,7 @@ app.use(
       // Allow any local network IP (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
       else if (
         origin.match(
-          /^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i
+          /^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i,
         ) ||
         origin.match(/^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/)
       ) {
@@ -85,7 +85,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -198,7 +198,7 @@ app
       console.error(`   Windows: netstat -ano | findstr :${PORT}`);
       console.error(`   Then: taskkill /PID <PID> /F`);
       console.error(
-        `\n2. Or change PORT in .env file to a different port (e.g., 3001)`
+        `\n2. Or change PORT in .env file to a different port (e.g., 3001)`,
       );
       console.error(`   Then update API_BASE_URL in src/services/api.js\n`);
       process.exit(1);

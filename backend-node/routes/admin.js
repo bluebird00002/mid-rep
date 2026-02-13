@@ -1,90 +1,138 @@
 // Delete a user by ID (permanent)
-router.delete('/users/:id', async (req, res) => {
+router.delete("/users/:id", async (req, res) => {
   const userId = req.params.id;
   try {
     // Delete user from users table
-    await db.query('DELETE FROM users WHERE id = ?', [userId]);
+    await db.query("DELETE FROM users WHERE id = ?", [userId]);
     // Optionally, delete related data (memories, images, etc.)
     // await db.query('DELETE FROM memories WHERE user_id = ?', [userId]);
     // await db.query('DELETE FROM images WHERE user_id = ?', [userId]);
-    res.json({ success: true, message: 'User deleted successfully' });
+    res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 });
 
 // Reset a user's password (admin sets new password)
-router.post('/users/:id/reset-password', async (req, res) => {
+router.post("/users/:id/reset-password", async (req, res) => {
   const userId = req.params.id;
   const { newPassword } = req.body;
   if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: "New password must be at least 6 characters.",
+      });
   }
   try {
-    const bcrypt = require('bcrypt');
+    const bcrypt = require("bcrypt");
     const hash = await bcrypt.hash(newPassword, 10);
-    await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hash, userId]);
-    res.json({ success: true, message: 'Password reset successfully' });
+    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [
+      hash,
+      userId,
+    ]);
+    res.json({ success: true, message: "Password reset successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 });
 
-import express from 'express';
-import bcrypt from 'bcrypt';
-import db from '../config/database.js';
+import express from "express";
+import bcrypt from "bcrypt";
+import db from "../config/database.js";
 const router = express.Router();
 
 // Admin login
-router.post('/login', async (req, res) => {
+router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
-    const [rows] = await db.query('SELECT * FROM admin_accounts WHERE username = ?', [username]);
-    if (!rows.length) return res.status(401).json({ success: false, message: 'Admin not found' });
+    const [rows] = await db.query(
+      "SELECT * FROM admin_accounts WHERE username = ?",
+      [username],
+    );
+    if (!rows.length)
+      return res
+        .status(401)
+        .json({ success: false, message: "Admin not found" });
     const admin = rows[0];
     const match = await bcrypt.compare(password, admin.password_hash);
-    if (!match) return res.status(401).json({ success: false, message: 'Incorrect password' });
+    if (!match)
+      return res
+        .status(401)
+        .json({ success: false, message: "Incorrect password" });
     // You can add JWT or session logic here
-    res.json({ success: true, admin: { id: admin.id, username: admin.username } });
+    res.json({
+      success: true,
+      admin: { id: admin.id, username: admin.username },
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 });
 
 // Change admin password
-router.post('/change-password', async (req, res) => {
+router.post("/change-password", async (req, res) => {
   const { username, oldPassword, newPassword } = req.body;
   try {
-    const [rows] = await db.query('SELECT * FROM admin_accounts WHERE username = ?', [username]);
-    if (!rows.length) return res.status(401).json({ success: false, message: 'Admin not found' });
+    const [rows] = await db.query(
+      "SELECT * FROM admin_accounts WHERE username = ?",
+      [username],
+    );
+    if (!rows.length)
+      return res
+        .status(401)
+        .json({ success: false, message: "Admin not found" });
     const admin = rows[0];
     const match = await bcrypt.compare(oldPassword, admin.password_hash);
-    if (!match) return res.status(401).json({ success: false, message: 'Incorrect old password' });
+    if (!match)
+      return res
+        .status(401)
+        .json({ success: false, message: "Incorrect old password" });
     const newHash = await bcrypt.hash(newPassword, 10);
-    await db.query('UPDATE admin_accounts SET password_hash = ? WHERE id = ?', [newHash, admin.id]);
-    res.json({ success: true, message: 'Password changed successfully' });
+    await db.query("UPDATE admin_accounts SET password_hash = ? WHERE id = ?", [
+      newHash,
+      admin.id,
+    ]);
+    res.json({ success: true, message: "Password changed successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 });
 
 // List all users (for admin dashboard)
-router.get('/users', async (req, res) => {
+router.get("/users", async (req, res) => {
   try {
-    const [users] = await db.query('SELECT id, username, created_at FROM users');
+    const [users] = await db.query(
+      "SELECT id, username, created_at FROM users",
+    );
     res.json({ success: true, users });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 });
 
 // List activity logs (for admin dashboard)
-router.get('/activity', async (req, res) => {
+router.get("/activity", async (req, res) => {
   try {
-    const [logs] = await db.query('SELECT * FROM login_track ORDER BY login_time DESC LIMIT 100');
+    const [logs] = await db.query(
+      "SELECT * FROM login_track ORDER BY login_time DESC LIMIT 100",
+    );
     res.json({ success: true, logs });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 });
 

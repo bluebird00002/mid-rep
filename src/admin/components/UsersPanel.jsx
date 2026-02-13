@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
 import "./UsersPanel.css";
@@ -32,11 +30,16 @@ export default function UsersPanel() {
   };
 
   const filteredUsers = users.filter((u) =>
-    u.username.toLowerCase().includes(search.toLowerCase())
+    u.username.toLowerCase().includes(search.toLowerCase()),
   );
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to permanently delete this user? This cannot be undone.")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this user? This cannot be undone.",
+      )
+    )
+      return;
     setActionMsg("");
     try {
       const res = await api.deleteUser(id);
@@ -91,7 +94,9 @@ export default function UsersPanel() {
           onChange={(e) => setSearch(e.target.value)}
           className="users-search-input"
         />
-        <button onClick={fetchUsers} className="users-refresh-btn">Refresh</button>
+        <button onClick={fetchUsers} className="users-refresh-btn">
+          Refresh
+        </button>
       </div>
       {loading && <div className="users-loading">Loading users...</div>}
       {error && <div className="users-error">{error}</div>}
@@ -107,31 +112,63 @@ export default function UsersPanel() {
         </thead>
         <tbody>
           {filteredUsers.length === 0 && !loading ? (
-            <tr><td colSpan={4}>No users found.</td></tr>
+            <tr>
+              <td colSpan={4}>No users found.</td>
+            </tr>
           ) : (
             filteredUsers.map((user) => (
               <tr key={user.id}>
                 <td>{user.id}</td>
                 <td>{user.username}</td>
-                <td>{user.created_at ? new Date(user.created_at).toLocaleString() : "-"}</td>
                 <td>
-                  <button className="users-action-btn delete" onClick={() => handleDelete(user.id)}>Delete</button>
-                  <button className="users-action-btn reset" onClick={() => handleResetPassword(user.id)}>Reset Password</button>
+                  {user.created_at
+                    ? new Date(user.created_at).toLocaleString()
+                    : "-"}
+                </td>
+                <td>
+                  <button
+                    className="users-action-btn delete"
+                    onClick={() => handleDelete(user.id)}
+                  >
+                    Delete
+                  </button>
+                  <button
+                    className="users-action-btn reset"
+                    onClick={() => handleResetPassword(user.id)}
+                  >
+                    Reset Password
+                  </button>
                   {resetUserId === user.id && (
-                    <form className="users-reset-form" onSubmit={handleResetPasswordSubmit} style={{ display: 'inline-block', marginLeft: 8 }}>
+                    <form
+                      className="users-reset-form"
+                      onSubmit={handleResetPasswordSubmit}
+                      style={{ display: "inline-block", marginLeft: 8 }}
+                    >
                       <input
                         type="password"
                         value={resetPassword}
-                        onChange={e => setResetPassword(e.target.value)}
+                        onChange={(e) => setResetPassword(e.target.value)}
                         placeholder="New password"
                         minLength={6}
                         className="users-reset-input"
                         autoFocus
                       />
-                      <button type="submit" className="users-action-btn reset" disabled={resetLoading} style={{marginLeft:4}}>
+                      <button
+                        type="submit"
+                        className="users-action-btn reset"
+                        disabled={resetLoading}
+                        style={{ marginLeft: 4 }}
+                      >
                         {resetLoading ? "Saving..." : "Save"}
                       </button>
-                      <button type="button" className="users-action-btn delete" onClick={() => setResetUserId(null)} style={{marginLeft:4}}>Cancel</button>
+                      <button
+                        type="button"
+                        className="users-action-btn delete"
+                        onClick={() => setResetUserId(null)}
+                        style={{ marginLeft: 4 }}
+                      >
+                        Cancel
+                      </button>
                     </form>
                   )}
                 </td>

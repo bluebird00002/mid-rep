@@ -6,7 +6,7 @@
   flex-direction: column;
   align-items: stretch;
   border-radius: 12px 0 0 12px;
-  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.08);
+  box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.08);
   padding: 2rem 1rem 1rem 1.5rem;
 }
 .admin-nav-title {
@@ -30,7 +30,8 @@
   gap: 0.7rem;
   transition: background 0.15s;
 }
-.admin-nav-list li.active, .admin-nav-list li:hover {
+.admin-nav-list li.active,
+.admin-nav-list li:hover {
   background: var(--mid-accent, #2e3650);
 }
 .admin-logout-btn {

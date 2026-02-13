@@ -50,7 +50,6 @@ export class CommandParser {
       return this.parseDelete(command);
     }
 
-
     // Search/Retrieve commands - allow "show all", "show #tag", and "show pictures"
     if (
       cmd === "show all" ||
@@ -164,7 +163,7 @@ export class CommandParser {
         result.content = content;
         console.log(
           "✅ DEBUG - content from colonMatch fallback:",
-          result.content
+          result.content,
         );
       }
     }
@@ -179,7 +178,7 @@ export class CommandParser {
     // Step 3: Extract tags
     // Pattern 1: "tags: tag1, tag2, tag3" - words separated by commas
     let tagsMatch = command.match(
-      /(?:with\s+)?tags:\s*([^"category]+?)(?=\s*(?:in\s+)?category:|["']|$)/i
+      /(?:with\s+)?tags:\s*([^"category]+?)(?=\s*(?:in\s+)?category:|["']|$)/i,
     );
 
     if (tagsMatch && tagsMatch[1]) {
@@ -339,7 +338,7 @@ export class CommandParser {
 
     // Check for tag-based deletion: "delete memories tags: work" or "delete memories #work"
     const tagsMatch = command.match(
-      /(?:tagged|tags|tag)\s*:\s*["']?([^"'.]+)["']?/i
+      /(?:tagged|tags|tag)\s*:\s*["']?([^"'.]+)["']?/i,
     );
     if (tagsMatch) {
       result.filters.tags = tagsMatch[1]
@@ -355,7 +354,7 @@ export class CommandParser {
 
     // Check for category-based deletion: "delete memories category: happy"
     const categoryMatch = command.match(
-      /(?:in\s+)?category\s*:\s*["']?(\w+)["']?/i
+      /(?:in\s+)?category\s*:\s*["']?(\w+)["']?/i,
     );
     if (categoryMatch) {
       result.filters.category = categoryMatch[1];
@@ -373,7 +372,7 @@ export class CommandParser {
     // Extract tags - support "tagged: tag1, tag2" or "tags: tag1" or "tag: tagname"
     // Allow spaces around colon
     const tagsMatch = command.match(
-      /(?:tagged|tags|tag)\s*:\s*["']?([^"'.]+)["']?/i
+      /(?:tagged|tags|tag)\s*:\s*["']?([^"'.]+)["']?/i,
     );
     if (tagsMatch) {
       result.filters.tags = tagsMatch[1]
@@ -391,14 +390,14 @@ export class CommandParser {
     // Extract category - support "category: happy" or "in category: happy"
     // Allow spaces around colon
     const categoryMatch = command.match(
-      /(?:in\s+)?category\s*:\s*["']?(\w+)["']?/i
+      /(?:in\s+)?category\s*:\s*["']?(\w+)["']?/i,
     );
     if (categoryMatch) {
       result.filters.category = categoryMatch[1];
     } else {
       // Also support mood-based categories like "show happy moments"
       const moodMatch = command.match(
-        /(happy|sad|angry|excited|calm|anxious|work|personal|ideas)\s+(?:moments|memories)/i
+        /(happy|sad|angry|excited|calm|anxious|work|personal|ideas)\s+(?:moments|memories)/i,
       );
       if (moodMatch) {
         result.filters.category = moodMatch[1];
@@ -413,7 +412,7 @@ export class CommandParser {
 
     // Extract search term
     const searchMatch = command.match(
-      /containing:\s*([^.]+)|search:\s*["']([^"']+)["']/i
+      /containing:\s*([^.]+)|search:\s*["']([^"']+)["']/i,
     );
     if (searchMatch) {
       result.filters.search = searchMatch[1] || searchMatch[2];
