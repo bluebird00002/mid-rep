@@ -2596,8 +2596,6 @@ function MyDiary() {
     addSystemMessage("  delete picture #id");
     addSystemMessage("  delete image #id");
     addSystemMessage("  delete all");
-    addSystemMessage("  delete memories tags: tag");
-    addSystemMessage("  delete memories category: happy");
     addSystemMessage("");
     addSystemMessage("═══ OTHER ═══");
     addSystemMessage("  clear");
