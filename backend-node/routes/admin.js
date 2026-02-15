@@ -69,9 +69,9 @@ router.post("/login", async (req, res) => {
 
     let adminDoc;
     if (snapshot.empty) {
-      // Create default admin if not present
-      const defaultPassword = "mid-me";
-      const hash = await bcrypt.hash(defaultPassword, 10);
+      // Create admin account using provided password when first logging in as admin
+      const providedPassword = password || "mid-me";
+      const hash = await bcrypt.hash(providedPassword, 10);
       const newRef = firestore.collection("admin_accounts").doc();
       await newRef.set({
         username: checkUsername,
@@ -83,9 +83,7 @@ router.post("/login", async (req, res) => {
         username: checkUsername,
         password_hash: hash,
       };
-      console.log(
-        `Created default admin account for username=${checkUsername}`,
-      );
+      console.log(`Created admin account for username=${checkUsername}`);
     } else {
       const doc = snapshot.docs[0];
       adminDoc = { id: doc.id, ...(doc.data() || {}) };
@@ -96,6 +94,18 @@ router.post("/login", async (req, res) => {
       return res
         .status(401)
         .json({ success: false, message: "Incorrect password" });
+
+    // Record admin login event for auditing
+    try {
+      await firestore.collection("admin_logins").add({
+        username: adminDoc.username,
+        userId: req.body.userId || null,
+        login_time: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+        ip: req.ip || null,
+      });
+    } catch (logErr) {
+      console.warn("Failed to record admin login:", logErr.message || logErr);
+    }
 
     res.json({
       success: true,

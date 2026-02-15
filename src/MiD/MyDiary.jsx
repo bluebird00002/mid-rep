@@ -36,7 +36,6 @@ function MyDiary() {
   const [pendingAction, setPendingAction] = useState(null); // { type: 'delete'|'edit', data: {...} }
   const [adminLoginMode, setAdminLoginMode] = useState(false); // true when waiting for admin password
   const [adminPassword, setAdminPassword] = useState("");
-  const [adminError, setAdminError] = useState(null);
   const [adminMode, setAdminMode] = useState(false); // true if admin is authenticated
   const [adminTransitionLoading, setAdminTransitionLoading] = useState(false);
   const originalUsernameRef = useRef(null);
@@ -64,6 +63,20 @@ function MyDiary() {
       navigate("/MiD/Home");
       return;
     }
+    // Restore admin session if persisted and belongs to this user
+    try {
+      const persisted = localStorage.getItem("mid_admin_mode");
+      const persistedUserId = localStorage.getItem("mid_admin_userId");
+      const persistedUsername = localStorage.getItem("mid_admin_username");
+      if (persisted === "true" && persistedUserId && user?.id && persistedUserId === String(user.id)) {
+        originalUsernameRef.current = persistedUsername || user.username;
+        setAdminMode(true);
+        if (updateUser && originalUsernameRef.current) {
+          updateUser({ username: `${originalUsernameRef.current}-admin` });
+        }
+        addSystemMessage("Restored admin session.");
+      }
+    } catch (e) {}
     // Save current page
     sessionStorage.setItem("mid_lastPage", "/MiD/MyDiary");
     // Do NOT auto-load memories on login. Only load when user requests them via 'show' command.
@@ -88,14 +101,14 @@ function MyDiary() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (!adminPassword.trim()) return;
-      setAdminError(null);
       try {
-        const res = await api.adminLogin({ password: adminPassword });
+        const payload = { password: adminPassword };
+        if (user?.username) payload.username = user.username;
+        if (user?.id) payload.userId = user.id;
+        const res = await api.adminLogin(payload);
+        setAdminLoginMode(false);
+        setAdminPassword("");
         if (res && res.success) {
-          // Start transition to admin mode with loading animation
-          setAdminLoginMode(false);
-          setAdminPassword("");
-          setAdminError(null);
           originalUsernameRef.current = user?.username || "user";
           setAdminTransitionLoading(true);
           addSystemMessage("Switching to admin mode...");
@@ -105,15 +118,23 @@ function MyDiary() {
             if (updateUser && originalUsernameRef.current) {
               updateUser({ username: `${originalUsernameRef.current}-admin` });
             }
+            // Persist admin session until user explicitly exits
+            try {
+              localStorage.setItem("mid_admin_mode", "true");
+              localStorage.setItem("mid_admin_userId", user?.id || "");
+              localStorage.setItem("mid_admin_username", originalUsernameRef.current);
+            } catch (e) {}
             addSystemMessage("Admin mode enabled.");
           }, 700);
         } else {
-          setAdminError("Incorrect admin password.");
-          addSystemMessage("Incorrect admin password.");
+          // API returned success=false
+          const msg = (res && (res.error || res.message)) || "Incorrect admin password.";
+          addSystemMessage(msg);
         }
       } catch (err) {
-        setAdminError("Admin login failed. Try again.");
-        addSystemMessage("Admin login failed. Try again.");
+        // Provide friendly message in history and avoid raw console errors
+        const msg = err && (err.message || "Admin login failed. Try again.");
+        addSystemMessage(msg);
       }
     }
   };
@@ -2874,6 +2895,11 @@ function MyDiary() {
                 if (updateUser && originalUsernameRef.current) {
                   updateUser({ username: originalUsernameRef.current });
                 }
+                try {
+                  localStorage.removeItem("mid_admin_mode");
+                  localStorage.removeItem("mid_admin_userId");
+                  localStorage.removeItem("mid_admin_username");
+                } catch (e) {}
                 addSystemMessage("Exited admin mode.");
               }}
             >
@@ -3060,13 +3086,7 @@ function MyDiary() {
                   />
                 )}
               </div>
-              {adminLoginMode && adminError && (
-                <div className="history-entry error">
-                  <span className="history-speaker">MiD</span>
-                  <ChevronRight size={14} />
-                  <span className="history-message">{adminError}</span>
-                </div>
-              )}
+              {/* Admin errors are shown as normal system history messages via addSystemMessage() */}
               {/* Hidden file input for image upload via "save picture" command */}
               <input
                 ref={fileInputRef}

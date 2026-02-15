@@ -41,9 +41,10 @@ class MiDApi {
         return { success: true, data: text };
       }
       if (!response.ok) {
-        const err =
-          data.error || data.message || `Request failed: ${response.status}`;
-        throw new Error(err);
+        const errMsg = data.error || data.message || `Request failed: ${response.status}`;
+        const err = new Error(errMsg);
+        err.status = response.status;
+        throw err;
       }
       if (data.success === undefined && data.data)
         return { success: true, ...data };
@@ -57,6 +58,11 @@ class MiDApi {
         throw new Error(
           "Cannot connect to server. Please ensure the backend is running on http://localhost:3000",
         );
+      }
+      // Ensure network errors keep original info
+      if (error instanceof Error && !error.status) {
+        // leave as-is
+        throw error;
       }
       throw error;
     }
