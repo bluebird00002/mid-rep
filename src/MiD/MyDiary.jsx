@@ -41,6 +41,7 @@ function MyDiary() {
   const originalUsernameRef = useRef(null);
   const [adminFailCount, setAdminFailCount] = useState(0);
   const [adminLockUntil, setAdminLockUntil] = useState(null); // timestamp ms
+  const adminLockTimerRef = useRef(null);
   const [tableBuilder, setTableBuilder] = useState(null); // { step: 'title'|'columns'|'rows'|'more'|'tags', data: {...} }
   const [tableEditor, setTableEditor] = useState(null); // { step: 'menu'|'title'|'columns'|'rows'|'add_row'|'edit_row'|'delete_row'|'tags'|'category', memory: {...}, data: {...} }
   const [listBuilder, setListBuilder] = useState(null); // { step: 'title'|'items'|'tags'|'category', data: {...} }
@@ -109,6 +110,29 @@ function MyDiary() {
   useEffect(() => {
     scrollToBottom();
   }, [history, memories]);
+
+  // When a lock is set, schedule a timer to clear it when it expires
+  useEffect(() => {
+    if (adminLockTimerRef.current) {
+      clearTimeout(adminLockTimerRef.current);
+      adminLockTimerRef.current = null;
+    }
+    if (adminLockUntil && adminLockUntil > Date.now()) {
+      const ms = adminLockUntil - Date.now();
+      adminLockTimerRef.current = setTimeout(() => {
+        try {
+          localStorage.removeItem("mid_admin_lock_until");
+          localStorage.removeItem("mid_admin_fail_count");
+        } catch (e) {}
+        setAdminFailCount(0);
+        setAdminLockUntil(null);
+        addSystemMessage("Admin lock expired. You may attempt admin login again.");
+      }, ms + 50);
+    }
+    return () => {
+      if (adminLockTimerRef.current) clearTimeout(adminLockTimerRef.current);
+    };
+  }, [adminLockUntil]);
 
   const scrollToBottom = () => {
     historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
