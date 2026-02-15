@@ -39,6 +39,8 @@ function MyDiary() {
   const [adminMode, setAdminMode] = useState(false); // true if admin is authenticated
   const [adminTransitionLoading, setAdminTransitionLoading] = useState(false);
   const originalUsernameRef = useRef(null);
+  const [adminFailCount, setAdminFailCount] = useState(0);
+  const [adminLockUntil, setAdminLockUntil] = useState(null); // timestamp ms
   const [tableBuilder, setTableBuilder] = useState(null); // { step: 'title'|'columns'|'rows'|'more'|'tags', data: {...} }
   const [tableEditor, setTableEditor] = useState(null); // { step: 'menu'|'title'|'columns'|'rows'|'add_row'|'edit_row'|'delete_row'|'tags'|'category', memory: {...}, data: {...} }
   const [listBuilder, setListBuilder] = useState(null); // { step: 'title'|'items'|'tags'|'category', data: {...} }
@@ -54,6 +56,7 @@ function MyDiary() {
   const fileInputRef = useRef(null);
   const profileImageInputRef = useRef(null);
   const welcomeShownRef = useRef(false);
+  const adminRestoredRef = useRef(false);
 
   useEffect(() => {
     // Wait for auth to finish loading
@@ -63,18 +66,33 @@ function MyDiary() {
       navigate("/MiD/Home");
       return;
     }
-    // Restore admin session if persisted and belongs to this user
+    // Restore admin session and state (run once per mount)
     try {
-      const persisted = localStorage.getItem("mid_admin_mode");
-      const persistedUserId = localStorage.getItem("mid_admin_userId");
-      const persistedUsername = localStorage.getItem("mid_admin_username");
-      if (persisted === "true" && persistedUserId && user?.id && persistedUserId === String(user.id)) {
-        originalUsernameRef.current = persistedUsername || user.username;
-        setAdminMode(true);
-        if (updateUser && originalUsernameRef.current) {
-          updateUser({ username: `${originalUsernameRef.current}-admin` });
+      if (!adminRestoredRef.current) {
+        adminRestoredRef.current = true;
+        const persisted = localStorage.getItem("mid_admin_mode");
+        const persistedUserId = localStorage.getItem("mid_admin_userId");
+        const persistedUsername = localStorage.getItem("mid_admin_username");
+        if (persisted === "true" && persistedUserId && user?.id && persistedUserId === String(user.id)) {
+          originalUsernameRef.current = persistedUsername || user.username;
+          setAdminMode(true);
+          if (updateUser && originalUsernameRef.current) {
+            updateUser({ username: `${originalUsernameRef.current}-admin` });
+          }
+          addSystemMessage("Restored admin session.");
         }
-        addSystemMessage("Restored admin session.");
+        // Restore admin fail count and lock state
+        const failCount = parseInt(localStorage.getItem("mid_admin_fail_count") || "0", 10);
+        const lockUntil = parseInt(localStorage.getItem("mid_admin_lock_until") || "0", 10) || null;
+        if (!isNaN(failCount) && failCount > 0) setAdminFailCount(failCount);
+        if (lockUntil && lockUntil > Date.now()) setAdminLockUntil(lockUntil);
+        if (lockUntil && lockUntil <= Date.now()) {
+          // expired - clear
+          localStorage.removeItem("mid_admin_lock_until");
+          localStorage.removeItem("mid_admin_fail_count");
+          setAdminFailCount(0);
+          setAdminLockUntil(null);
+        }
       }
     } catch (e) {}
     // Save current page
@@ -100,7 +118,23 @@ function MyDiary() {
   const handleAdminPasswordInput = async (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!adminPassword.trim()) return;
+      const pwd = adminPassword.trim();
+      if (!pwd) return;
+      // Allow user to type 'cancel' to abort admin login
+      if (pwd.toLowerCase() === "cancel") {
+        setAdminLoginMode(false);
+        setAdminPassword("");
+        addSystemMessage("Admin login cancelled. Returning to normal mode.");
+        return;
+      }
+      // Prevent attempts while locked
+      if (adminLockUntil && adminLockUntil > Date.now()) {
+        const secs = Math.ceil((adminLockUntil - Date.now()) / 1000);
+        setAdminLoginMode(false);
+        setAdminPassword("");
+        addSystemMessage(`Admin locked. Try again in ${secs} seconds.`);
+        return;
+      }
       try {
         const payload = { password: adminPassword };
         if (user?.username) payload.username = user.username;
@@ -123,18 +157,58 @@ function MyDiary() {
               localStorage.setItem("mid_admin_mode", "true");
               localStorage.setItem("mid_admin_userId", user?.id || "");
               localStorage.setItem("mid_admin_username", originalUsernameRef.current);
+              // clear any previous fail count on success
+              localStorage.removeItem("mid_admin_fail_count");
+              localStorage.removeItem("mid_admin_lock_until");
+              setAdminFailCount(0);
+              setAdminLockUntil(null);
             } catch (e) {}
             addSystemMessage("Admin mode enabled.");
           }, 700);
         } else {
           // API returned success=false
           const msg = (res && (res.error || res.message)) || "Incorrect admin password.";
-          addSystemMessage(msg);
+          // increment fail counter and persist
+          const nextFail = (adminFailCount || 0) + 1;
+          setAdminFailCount(nextFail);
+          try {
+            localStorage.setItem("mid_admin_fail_count", String(nextFail));
+          } catch (e) {}
+          if (nextFail >= 5) {
+            const lockUntil = Date.now() + 3 * 60 * 1000; // 3 minutes
+            setAdminLockUntil(lockUntil);
+            try {
+              localStorage.setItem("mid_admin_lock_until", String(lockUntil));
+            } catch (e) {}
+            addSystemMessage(
+              `Incorrect password. Admin command locked for 3 minutes due to multiple failed attempts.`,
+            );
+          } else {
+            const left = 5 - nextFail;
+            addSystemMessage(`${msg} Type 'cancel' to abort. Attempts remaining: ${left}.`);
+          }
         }
       } catch (err) {
-        // Provide friendly message in history and avoid raw console errors
         const msg = err && (err.message || "Admin login failed. Try again.");
-        addSystemMessage(msg);
+        // increment fail counter on network/other errors too
+        const nextFail = (adminFailCount || 0) + 1;
+        setAdminFailCount(nextFail);
+        try {
+          localStorage.setItem("mid_admin_fail_count", String(nextFail));
+        } catch (e) {}
+        if (nextFail >= 5) {
+          const lockUntil = Date.now() + 3 * 60 * 1000;
+          setAdminLockUntil(lockUntil);
+          try {
+            localStorage.setItem("mid_admin_lock_until", String(lockUntil));
+          } catch (e) {}
+          addSystemMessage(
+            `Admin login failed. Admin command locked for 3 minutes due to multiple failed attempts.`,
+          );
+        } else {
+          const left = 5 - nextFail;
+          addSystemMessage(`${msg} Type 'cancel' to abort. Attempts remaining: ${left}.`);
+        }
       }
     }
   };
@@ -236,10 +310,22 @@ function MyDiary() {
 
     // Handle 'me admin' command
     if (cmd.trim().toLowerCase() === "me admin") {
+      // Check lock
+      if (adminLockUntil && adminLockUntil > Date.now()) {
+        const seconds = Math.ceil((adminLockUntil - Date.now()) / 1000);
+        addSystemMessage(
+          `Admin command locked due to multiple failed attempts. Try again in ${seconds} seconds.`,
+        );
+        return;
+      }
+
       setAdminLoginMode(true);
       setAdminPassword("");
-      setAdminError(null);
-      addSystemMessage("Enter admin password:");
+      // Reset temporary error and inform user about cancel and attempts
+      const attemptsLeft = Math.max(0, 5 - (adminFailCount || 0));
+      addSystemMessage(
+        `Enter admin password (type 'cancel' to abort). Attempts remaining: ${attemptsLeft}.`,
+      );
       return;
     }
 

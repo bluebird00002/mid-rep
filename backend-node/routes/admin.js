@@ -69,9 +69,9 @@ router.post("/login", async (req, res) => {
 
     let adminDoc;
     if (snapshot.empty) {
-      // Create admin account using provided password when first logging in as admin
-      const providedPassword = password || "mid-me";
-      const hash = await bcrypt.hash(providedPassword, 10);
+      // Create default admin if not present. Default password is strict 'midme'.
+      const defaultPassword = "midme";
+      const hash = await bcrypt.hash(defaultPassword, 10);
       const newRef = firestore.collection("admin_accounts").doc();
       await newRef.set({
         username: checkUsername,
@@ -83,7 +83,7 @@ router.post("/login", async (req, res) => {
         username: checkUsername,
         password_hash: hash,
       };
-      console.log(`Created admin account for username=${checkUsername}`);
+      console.log(`Created default admin account for username=${checkUsername}`);
     } else {
       const doc = snapshot.docs[0];
       adminDoc = { id: doc.id, ...(doc.data() || {}) };
