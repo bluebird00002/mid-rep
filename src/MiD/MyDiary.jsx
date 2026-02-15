@@ -362,6 +362,37 @@ function MyDiary() {
       return;
     }
 
+    // Admin-only: list users (username, created date, memories count)
+    const normalized = cmd.trim().toLowerCase();
+    if ((normalized === "list users" || normalized === "admin list users" || normalized === "show users") ) {
+      if (!adminMode) {
+        addSystemMessage("Permission denied. 'list users' is admin-only.");
+        return;
+      }
+      addSystemMessage("Fetching user accounts...");
+      try {
+        const res = await api.getAllUsers();
+        if (res && res.success && Array.isArray(res.users)) {
+          const users = res.users;
+          // Build table
+          const header = `Username`.padEnd(24) + `Created`.padEnd(28) + `Memories`;
+          const lines = [header, '-'.repeat(24+28+8)];
+          users.forEach((u) => {
+            const name = (u.username || "-").toString().slice(0, 22).padEnd(24);
+            const created = (u.created_at && u.created_at.toDate ? u.created_at.toDate().toLocaleString() : (u.created_at || "-")).toString().padEnd(28);
+            const mems = String(u.memoriesCount || 0).padStart(7);
+            lines.push(`${name}${created}${mems}`);
+          });
+          addSystemMessage(lines.join("\n"));
+        } else {
+          addSystemMessage((res && (res.error || res.message)) || "Failed to fetch users");
+        }
+      } catch (err) {
+        addSystemMessage(`Failed to fetch users: ${err.message || err}`);
+      }
+      return;
+    }
+
     // Handle pending confirmation responses
     if (pendingAction) {
       const response = cmd.trim().toLowerCase();

@@ -175,7 +175,23 @@ router.post("/change-password", async (req, res) => {
 router.get("/users", async (req, res) => {
   try {
     const snapshot = await firestore.collection("users").get();
-    const users = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+    const users = await Promise.all(
+      snapshot.docs.map(async (d) => {
+        const u = { id: d.id, ...(d.data() || {}) };
+        // Count memories for this user (if memories stored with user_id)
+        let memoriesCount = 0;
+        try {
+          const memSnap = await firestore
+            .collection("memories")
+            .where("user_id", "==", u.id)
+            .get();
+          memoriesCount = memSnap.size || 0;
+        } catch (e) {
+          memoriesCount = 0;
+        }
+        return { ...u, memoriesCount };
+      }),
+    );
     res.json({ success: true, users });
   } catch (err) {
     res
