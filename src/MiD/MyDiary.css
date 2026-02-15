@@ -400,6 +400,59 @@
   transform: scale(1.05);
 }
 
+/* Admin badge and transition overlay */
+.admin-badge {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 166, 0, 0.06);
+  border: 1px solid rgba(255, 166, 0, 0.15);
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+.admin-badge-label {
+  color: #ffa600;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.admin-exit-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 166, 0, 0.25);
+  color: #ffa600;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.admin-exit-btn:hover {
+  background: rgba(255, 166, 0, 0.08);
+}
+.admin-transition-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.6);
+  z-index: 40;
+}
+.admin-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #ffa600;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,166,0,0.15);
+  background: rgba(0,0,0,0.7);
+}
+.admin-loading .loading-icon {
+  width: 22px;
+  height: 22px;
+  color: #ffa600;
+  animation: spin 1s linear infinite;
+}
+
 .profile-image-btn:disabled {
   cursor: not-allowed;
   opacity: 0.7;

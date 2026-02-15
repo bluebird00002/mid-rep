@@ -17,7 +17,7 @@ import api from "../services/api";
 import MemoryCard from "../components/MemoryCard";
 import ImageCropper from "../components/ImageCropper";
 import { useAuth } from "../context/AuthContext";
-import { AdminDashboard } from "../admin";
+// Admin dashboard is no longer navigated to; admin mode is in-page
 import "./MyDiary.css";
 import "@fontsource/jetbrains-mono";
 
@@ -38,6 +38,8 @@ function MyDiary() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState(null);
   const [adminMode, setAdminMode] = useState(false); // true if admin is authenticated
+  const [adminTransitionLoading, setAdminTransitionLoading] = useState(false);
+  const originalUsernameRef = useRef(null);
   const [tableBuilder, setTableBuilder] = useState(null); // { step: 'title'|'columns'|'rows'|'more'|'tags', data: {...} }
   const [tableEditor, setTableEditor] = useState(null); // { step: 'menu'|'title'|'columns'|'rows'|'add_row'|'edit_row'|'delete_row'|'tags'|'category', memory: {...}, data: {...} }
   const [listBuilder, setListBuilder] = useState(null); // { step: 'title'|'items'|'tags'|'category', data: {...} }
@@ -90,11 +92,21 @@ function MyDiary() {
       try {
         const res = await api.adminLogin({ password: adminPassword });
         if (res && res.success) {
-          setAdminMode(true);
+          // Start transition to admin mode with loading animation
           setAdminLoginMode(false);
           setAdminPassword("");
           setAdminError(null);
-          addSystemMessage("Admin login successful. Welcome, admin!");
+          originalUsernameRef.current = user?.username || "user";
+          setAdminTransitionLoading(true);
+          addSystemMessage("Switching to admin mode...");
+          setTimeout(() => {
+            setAdminMode(true);
+            setAdminTransitionLoading(false);
+            if (updateUser && originalUsernameRef.current) {
+              updateUser({ username: `${originalUsernameRef.current}-admin` });
+            }
+            addSystemMessage("Admin mode enabled.");
+          }, 700);
         } else {
           setAdminError("Incorrect admin password.");
           addSystemMessage("Incorrect admin password.");
@@ -2835,14 +2847,40 @@ function MyDiary() {
     }
   };
 
-  if (adminMode) {
-    return <AdminDashboard onLogout={() => setAdminMode(false)} />;
-  }
+  // Admin mode is rendered inline; show normal diary UI but surface admin badge
 
   return (
     <div className="diary-container">
+      {/* Admin transition loader overlay */}
+      {adminTransitionLoading && (
+        <div className="admin-transition-overlay">
+          <div className="admin-loading">
+            <Loader2 className="loading-icon" />
+            <div>Switching to Admin Mode...</div>
+          </div>
+        </div>
+      )}
       {/* Profile Header Section */}
       <div className="diary-profile-header">
+        {/* Inline admin badge / controls */}
+        {adminMode && (
+          <div className="admin-badge">
+            <div className="admin-badge-label">Admin Mode</div>
+            <button
+              className="admin-exit-btn"
+              onClick={() => {
+                // Exit admin mode and restore username
+                setAdminMode(false);
+                if (updateUser && originalUsernameRef.current) {
+                  updateUser({ username: originalUsernameRef.current });
+                }
+                addSystemMessage("Exited admin mode.");
+              }}
+            >
+              Exit
+            </button>
+          </div>
+        )}
         <div className="profile-card">
           <div className="profile-image-wrapper">
             <button
