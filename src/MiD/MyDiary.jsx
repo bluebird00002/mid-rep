@@ -568,17 +568,29 @@ function MyDiary() {
 
         // Display only the newly created memory
         const apiMemory = result.data || result.memory || result;
-        const newMemory = {
-          ...memoryData,
-          ...apiMemory, // API response takes precedence for id, etc.
-          // Ensure we have all required fields
-          id: apiMemory.id || apiMemory.memory_id || Date.now(),
-          content: memoryData.content,
-          type: "text",
-          tags: parsed.tags || [],
-          category: parsed.category,
-          created_at: apiMemory.created_at || memoryData.created_at,
-        };
+        const createdId = (apiMemory && (apiMemory.id || apiMemory.memory_id)) || null;
+        let newMemory = null;
+        if (createdId) {
+          try {
+            const fetched = await api.getMemory(createdId);
+            if (fetched && fetched.success && fetched.data && fetched.data.memory) {
+              newMemory = fetched.data.memory;
+            }
+          } catch (e) {
+            console.warn("Failed to fetch created memory, falling back to local copy", e);
+          }
+        }
+        if (!newMemory) {
+          newMemory = {
+            ...memoryData,
+            id: createdId || Date.now(),
+            content: memoryData.content,
+            type: "text",
+            tags: parsed.tags || [],
+            category: parsed.category,
+            created_at: (apiMemory && (apiMemory.created_at)) || memoryData.created_at,
+          };
+        }
         setMemories([newMemory]);
       } else {
         throw new Error("Failed to save memory");

@@ -158,7 +158,7 @@ function MemoryCard({ memory, onEdit, onDelete }) {
         );
 
       default:
-        return <p className="memory-text">{memory.content}</p>;
+        return <p className="memory-text">{memory.content !== undefined && memory.content !== null ? String(memory.content) : ""}</p>;
     }
   };
 
