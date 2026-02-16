@@ -376,37 +376,18 @@ function MyDiary() {
       addSystemMessage("Fetching user accounts...");
       try {
         const res = await api.getAllUsers();
-        if (res && res.success && Array.isArray(res.users)) {
-          const users = res.users;
-          // Build table
-          const header = `Username`.padEnd(20) + `Created`.padEnd(26) + `Memories`.padEnd(10) + `Avatar`;
-          const lines = [header, '-'.repeat(20 + 26 + 10 + 24)];
-          users.forEach((u) => {
-            const name = (u.username || "-").toString().slice(0, 18).padEnd(20);
-            // Format created date nicely
-            let createdStr = "-";
-            if (u.created_at) {
-              try {
-                const d = new Date(u.created_at);
-                createdStr = d.toLocaleString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-              } catch (e) {
-                createdStr = String(u.created_at);
-              }
-            }
-            const created = createdStr.padEnd(26);
-            const mems = String(u.totalCount || u.memoriesCount || 0).padStart(8);
-            const avatar = u.profile_image_url
-              ? (u.profile_image_url.replace(/^https?:\/\//, "").slice(0, 30))
-              : "No";
-            lines.push(`${name}${created}${mems}   ${avatar}`);
-          });
-          addSystemMessage(lines.join("\n"));
+          if (res && res.success && Array.isArray(res.users)) {
+            const users = res.users;
+            // Push a structured history entry so UI can render avatars and table
+            setHistory((prev) => [
+              ...prev,
+              {
+                type: "system",
+                speaker: "MiD",
+                usersTable: users,
+                timestamp: new Date(),
+              },
+            ]);
         } else {
           addSystemMessage((res && (res.error || res.message)) || "Failed to fetch users");
         }
@@ -3172,6 +3153,47 @@ function MyDiary() {
             {history.map((entry, idx) => {
               // Skip empty messages
               if (!entry.message && entry.type === "user") return null;
+              // Render a users table if present
+              if (entry.usersTable && Array.isArray(entry.usersTable)) {
+                return (
+                  <div key={idx} className={`history-entry ${entry.type}`}>
+                    <span className="history-speaker">
+                      {entry.speaker}
+                      <ChevronRight size={14} />
+                    </span>
+                    <div className="history-message users-table">
+                      <div className="users-table-header">
+                        <div className="col-username">Username</div>
+                        <div className="col-created">Created</div>
+                        <div className="col-memories">Memories</div>
+                        <div className="col-avatar">Avatar</div>
+                      </div>
+                      {entry.usersTable.map((u) => (
+                        <div key={u.id} className="users-table-row">
+                          <div className="col-username">{u.username || "-"}</div>
+                          <div className="col-created">
+                            {u.created_at ? new Date(u.created_at).toLocaleString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }) : "-"}
+                          </div>
+                          <div className="col-memories">{u.totalCount ?? (u.memoriesCount || 0)}</div>
+                          <div className="col-avatar">
+                            {u.profile_image_url ? (
+                              <img src={u.profile_image_url} alt={u.username} className="user-avatar-small" />
+                            ) : (
+                              <div className="user-avatar-empty">No</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div key={idx} className={`history-entry ${entry.type}`}>
                   <span className="history-speaker">

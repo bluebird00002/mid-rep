@@ -119,6 +119,49 @@
   line-height: 1.6;
 }
 
+/* Users table in history */
+.users-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.users-table-header,
+.users-table-row {
+  display: grid;
+  grid-template-columns: 1fr 220px 80px 80px;
+  gap: 12px;
+  align-items: center;
+}
+.users-table-header {
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255,166,0,0.12);
+  padding-bottom: 6px;
+}
+.users-table-row {
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(255,166,0,0.04);
+}
+.col-username { }
+.col-created { color: rgba(255,166,0,0.9); }
+.col-memories { text-align: right; }
+.col-avatar { display:flex; align-items:center; justify-content:flex-end; }
+.user-avatar-small {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255,166,0,0.18);
+}
+.user-avatar-empty {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display:flex; align-items:center; justify-content:center;
+  color: rgba(255,166,0,0.6);
+  border: 1px solid rgba(255,166,0,0.06);
+}
+
 .terminal-history::-webkit-scrollbar {
   width: 8px;
 }
