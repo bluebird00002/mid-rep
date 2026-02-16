@@ -379,13 +379,32 @@ function MyDiary() {
         if (res && res.success && Array.isArray(res.users)) {
           const users = res.users;
           // Build table
-          const header = `Username`.padEnd(24) + `Created`.padEnd(28) + `Memories`;
-          const lines = [header, '-'.repeat(24+28+8)];
+          const header = `Username`.padEnd(20) + `Created`.padEnd(26) + `Memories`.padEnd(10) + `Avatar`;
+          const lines = [header, '-'.repeat(20 + 26 + 10 + 24)];
           users.forEach((u) => {
-            const name = (u.username || "-").toString().slice(0, 22).padEnd(24);
-            const created = (u.created_at && u.created_at.toDate ? u.created_at.toDate().toLocaleString() : (u.created_at || "-")).toString().padEnd(28);
-            const mems = String(u.memoriesCount || 0).padStart(7);
-            lines.push(`${name}${created}${mems}`);
+            const name = (u.username || "-").toString().slice(0, 18).padEnd(20);
+            // Format created date nicely
+            let createdStr = "-";
+            if (u.created_at) {
+              try {
+                const d = new Date(u.created_at);
+                createdStr = d.toLocaleString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+              } catch (e) {
+                createdStr = String(u.created_at);
+              }
+            }
+            const created = createdStr.padEnd(26);
+            const mems = String(u.totalCount || u.memoriesCount || 0).padStart(8);
+            const avatar = u.profile_image_url
+              ? (u.profile_image_url.replace(/^https?:\/\//, "").slice(0, 30))
+              : "No";
+            lines.push(`${name}${created}${mems}   ${avatar}`);
           });
           addSystemMessage(lines.join("\n"));
         } else {
