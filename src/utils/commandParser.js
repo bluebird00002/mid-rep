@@ -148,9 +148,10 @@ export class CommandParser {
     console.log("DEBUG parseCreateMemory - input command:", command);
 
     // Step 1: Extract content from quotes (highest priority)
-    const contentMatch = command.match(/["']([^"']+)["']/);
+    // Match an opening quote (single or double) and the corresponding closing quote
+    const contentMatch = command.match(/(["'])([\s\S]*?)\1/);
     if (contentMatch) {
-      result.content = contentMatch[1];
+      result.content = contentMatch[2];
       console.log("✅ DEBUG - content from quotes:", result.content);
     } else {
       // Step 2: Fallback - content after "create memory :"
