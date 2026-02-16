@@ -334,6 +334,10 @@ function MyDiary() {
 
     // Handle 'me admin' command
     if (cmd.trim().toLowerCase() === "me admin") {
+      if (adminMode) {
+        addSystemMessage("Already in admin mode — you may proceed with administrative tasks.");
+        return;
+      }
       // Check lock
       if (adminLockUntil && adminLockUntil > Date.now()) {
         const seconds = Math.ceil((adminLockUntil - Date.now()) / 1000);

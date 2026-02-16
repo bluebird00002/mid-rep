@@ -177,19 +177,43 @@ router.get("/users", async (req, res) => {
     const snapshot = await firestore.collection("users").get();
     const users = await Promise.all(
       snapshot.docs.map(async (d) => {
-        const u = { id: d.id, ...(d.data() || {}) };
-        // Count memories for this user (if memories stored with user_id)
+        const raw = d.data() || {};
+        const u = { id: d.id, ...raw };
+        // Count memories for this user (text memories) and images (stored separately)
         let memoriesCount = 0;
         try {
           const memSnap = await firestore
             .collection("memories")
             .where("user_id", "==", u.id)
             .get();
-          memoriesCount = memSnap.size || 0;
+          const imgSnap = await firestore
+            .collection("images")
+            .where("user_id", "==", u.id)
+            .get();
+          memoriesCount = (memSnap.size || 0) + (imgSnap.size || 0);
         } catch (e) {
           memoriesCount = 0;
         }
-        return { ...u, memoriesCount };
+
+        // Normalize created_at to ISO string if it's a Firestore Timestamp
+        let createdAt = null;
+        try {
+          if (raw && raw.created_at && raw.created_at.toDate) {
+            createdAt = raw.created_at.toDate().toISOString();
+          } else if (raw && raw.created_at) {
+            createdAt = raw.created_at;
+          }
+        } catch (e) {
+          createdAt = raw.created_at || null;
+        }
+
+        // Return only necessary fields + counts
+        return {
+          id: u.id,
+          username: u.username || null,
+          created_at: createdAt,
+          memoriesCount,
+        };
       }),
     );
     res.json({ success: true, users });
