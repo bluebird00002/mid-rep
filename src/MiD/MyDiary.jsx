@@ -185,7 +185,12 @@ function MyDiary() {
             }
             // Call API to change admin password
             try {
-              const usernameForChange = originalUsernameRef.current || user?.username || null;
+              // Ensure we send the canonical username (strip any '-admin' suffix)
+              const rawName = originalUsernameRef.current || user?.username || null;
+              let usernameForChange = rawName;
+              if (typeof usernameForChange === "string" && usernameForChange.endsWith("-admin")) {
+                usernameForChange = usernameForChange.slice(0, -"-admin".length);
+              }
               const payload = {
                 username: usernameForChange,
                 oldPassword: oldPwd,
