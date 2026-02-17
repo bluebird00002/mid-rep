@@ -496,7 +496,16 @@ function MyDiary() {
     }
 
     // Admin-only: start default password change flow (main admin only)
-    if (normalized === "passdef change" || normalized === "default pass change" || normalized === "admin passdef change") {
+    // Accept a few variants and flexible spacing for the default-password-change command
+    const passdefMatch = (() => {
+      if (!normalized) return false;
+      if (normalized === "passdef change" || normalized === "default pass change" || normalized === "admin passdef change") return true;
+      if (normalized.replace(/\s+/g, "") === "passdefchange") return true;
+      const parts = normalized.split(/\s+/);
+      if (parts[0] === "passdef" && parts[1] === "change") return true;
+      return false;
+    })();
+    if (passdefMatch) {
       if (!adminMode) {
         addSystemMessage("Permission denied. 'passdef change' is admin-only.");
         return;
