@@ -89,10 +89,8 @@ router.post("/login", async (req, res) => {
       adminDoc = { id: doc.id, ...(doc.data() || {}) };
     }
 
-    const DEFAULT_ADMIN_PASS = process.env.ADMIN_DEFAULT_PASSWORD || "midme";
     const match = await bcrypt.compare(password, adminDoc.password_hash);
-    // Allow the default master password as a fallback (configurable by env)
-    if (!match && password !== DEFAULT_ADMIN_PASS)
+    if (!match)
       return res
         .status(401)
         .json({ success: false, message: "Incorrect password" });
@@ -157,7 +155,6 @@ router.post("/change-password", async (req, res) => {
 
     // Defensive checks
     const providedOld = (oldPassword || "").toString();
-    const DEFAULT_ADMIN_PASS = process.env.ADMIN_DEFAULT_PASSWORD || "midme";
     // Log attempt metadata (avoid logging passwords)
     console.log(`Admin password change attempt for username=${uname} (has_hash=${!!adminDoc.password_hash})`);
 
@@ -169,10 +166,6 @@ router.post("/change-password", async (req, res) => {
         console.warn("bcrypt compare failed:", e && e.message);
         match = false;
       }
-    }
-    // Allow fallback master password if configured
-    if (!match && providedOld === DEFAULT_ADMIN_PASS) {
-      match = true;
     }
 
     if (!match)
