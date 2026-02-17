@@ -90,6 +90,12 @@ class MiDApi {
       body: JSON.stringify(payload),
     });
   }
+  async changeDefaultPassword(payload) {
+    return this.request("/admin/passdef-change", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
   async adminLogin(payload) {
     return this.request("/admin/login", {
       method: "POST",

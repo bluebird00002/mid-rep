@@ -183,27 +183,40 @@ function MyDiary() {
               addSystemMessage("New password and confirmation do not match. Aborting.");
               return;
             }
-            // Call API to change admin password
+            // If this is the default-password-change flow, call the appropriate API
             try {
-              // Ensure we send the canonical username (strip any '-admin' suffix)
               const rawName = originalUsernameRef.current || user?.username || null;
               let usernameForChange = rawName;
               if (typeof usernameForChange === "string" && usernameForChange.endsWith("-admin")) {
                 usernameForChange = usernameForChange.slice(0, -"-admin".length);
               }
-              const payload = {
-                username: usernameForChange,
-                oldPassword: oldPwd,
-                newPassword: newPwd,
-              };
-              const res = await api.changeAdminPassword(payload);
-              if (res && res.success) {
-                addSystemMessage("Admin password changed successfully.");
+              if (adminPassFlow.isDefault) {
+                const payload = {
+                  username: usernameForChange,
+                  adminPassword: oldPwd,
+                  newDefaultPassword: newPwd,
+                };
+                const res = await api.changeDefaultPassword(payload);
+                if (res && res.success) {
+                  addSystemMessage("Default admin password changed successfully.");
+                } else {
+                  addSystemMessage((res && (res.error || res.message)) || "Failed to change default password.");
+                }
               } else {
-                addSystemMessage((res && (res.error || res.message)) || "Failed to change admin password.");
+                const payload = {
+                  username: usernameForChange,
+                  oldPassword: oldPwd,
+                  newPassword: newPwd,
+                };
+                const res = await api.changeAdminPassword(payload);
+                if (res && res.success) {
+                  addSystemMessage("Admin password changed successfully.");
+                } else {
+                  addSystemMessage((res && (res.error || res.message)) || "Failed to change admin password.");
+                }
               }
             } catch (err) {
-              addSystemMessage((err && err.message) || "Failed to change admin password.");
+              addSystemMessage((err && err.message) || "Failed to change password.");
             }
             return;
           }
@@ -479,6 +492,19 @@ function MyDiary() {
       setAdminLoginMode(true);
       setAdminPassword("");
       addSystemMessage("Admin password change initiated. Enter current (old) password (or type 'cancel' to abort):");
+      return;
+    }
+
+    // Admin-only: start default password change flow (main admin only)
+    if (normalized === "passdef change" || normalized === "default pass change" || normalized === "admin passdef change") {
+      if (!adminMode) {
+        addSystemMessage("Permission denied. 'passdef change' is admin-only.");
+        return;
+      }
+      setAdminPassFlow({ step: "old", isDefault: true, data: {} });
+      setAdminLoginMode(true);
+      setAdminPassword("");
+      addSystemMessage("Default password change initiated. Enter main admin password (or type 'cancel' to abort):");
       return;
     }
 
