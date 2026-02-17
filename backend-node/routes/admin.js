@@ -77,7 +77,16 @@ router.post("/login", async (req, res) => {
     if (!snap.empty) {
       const doc = snap.docs[0];
       const adminDoc = { id: doc.id, ...(doc.data() || {}) };
-      const match = await bcrypt.compare((password || "").toString(), adminDoc.password_hash || "");
+      const providedPwd = (password || "").toString().trim();
+      console.log(`Admin login attempt for username=${adminUsername} (existing account).`);
+      let match = false;
+      try {
+        match = await bcrypt.compare(providedPwd, adminDoc.password_hash || "");
+      } catch (e) {
+        console.warn("bcrypt compare failed:", e && e.message);
+        match = false;
+      }
+      console.log(`Password compare result for ${adminUsername}: ${match}`);
       if (!match) return res.status(401).json({ success: false, message: "Incorrect password" });
 
       // Record admin login event for auditing
@@ -109,7 +118,7 @@ router.post("/login", async (req, res) => {
     // If no default exists, treat this login as creating the first/default password and main admin
     if (!defaultHash) {
       // First admin: set the provided password as the default (hash it) and create admin account
-      const provided = (password || "").toString();
+      const provided = (password || "").toString().trim();
       if (!provided) return res.status(401).json({ success: false, message: "Incorrect password" });
       const hash = await bcrypt.hash(provided, 10);
       const defRef = firestore.collection("admin_defaults").doc();
@@ -120,8 +129,15 @@ router.post("/login", async (req, res) => {
     }
 
     // Compare provided password to default hash
-    const providedPwd = (password || "").toString();
-    const defaultMatch = defaultHash ? await bcrypt.compare(providedPwd, defaultHash) : false;
+    const providedPwd = (password || "").toString().trim();
+    let defaultMatch = false;
+    try {
+      defaultMatch = defaultHash ? await bcrypt.compare(providedPwd, defaultHash) : false;
+    } catch (e) {
+      console.warn("bcrypt compare for default failed:", e && e.message);
+      defaultMatch = false;
+    }
+    console.log(`Default password compare result for ${adminUsername}: ${defaultMatch}`);
     if (!defaultMatch) return res.status(401).json({ success: false, message: "Incorrect password" });
 
     // Create a new admin account for this user using the default hash

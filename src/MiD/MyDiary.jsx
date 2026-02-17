@@ -245,7 +245,7 @@ function MyDiary() {
       }
       try {
         const payload = { password: adminPassword };
-        if (user?.username) payload.username = user.username;
+        if (user?.username) payload.username = user.username.toString().trim();
         if (user?.id) payload.userId = user.id;
         const res = await api.adminLogin(payload);
         setAdminLoginMode(false);
