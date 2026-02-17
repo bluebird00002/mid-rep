@@ -39,6 +39,7 @@ function MyDiary() {
   const [adminMode, setAdminMode] = useState(false); // true if admin is authenticated
   const [adminTransitionLoading, setAdminTransitionLoading] = useState(false);
   const originalUsernameRef = useRef(null);
+  const [adminPassFlow, setAdminPassFlow] = useState(null); // { step: 'confirm'|'old'|'new'|'confirmNew', data: { old, new }}
   const [adminFailCount, setAdminFailCount] = useState(0);
   const [adminLockUntil, setAdminLockUntil] = useState(null); // timestamp ms
   const adminLockTimerRef = useRef(null);
@@ -144,6 +145,71 @@ function MyDiary() {
       e.preventDefault();
       const pwd = adminPassword.trim();
       if (!pwd) return;
+      // If we're in admin password-change flow, handle that separately
+      if (adminPassFlow) {
+        // allow cancel
+        if (pwd.toLowerCase() === "cancel") {
+          setAdminPassFlow(null);
+          setAdminLoginMode(false);
+          setAdminPassword("");
+          addSystemMessage("Password change cancelled.");
+          return;
+        }
+        try {
+          if (adminPassFlow.step === "old") {
+            setAdminPassFlow({ step: "new", data: { ...adminPassFlow.data, old: pwd } });
+            setAdminPassword("");
+            addSystemMessage("Enter new password:");
+            return;
+          }
+          if (adminPassFlow.step === "new") {
+            setAdminPassFlow({ step: "confirmNew", data: { ...adminPassFlow.data, new: pwd } });
+            setAdminPassword("");
+            addSystemMessage("Confirm new password:");
+            return;
+          }
+          if (adminPassFlow.step === "confirmNew") {
+            const oldPwd = adminPassFlow.data?.old;
+            const newPwd = adminPassFlow.data?.new;
+            const confirmPwd = pwd;
+            setAdminPassword("");
+            setAdminLoginMode(false);
+            setAdminPassFlow(null);
+            if (!oldPwd || !newPwd) {
+              addSystemMessage("Password change failed: missing data. Try again.");
+              return;
+            }
+            if (newPwd !== confirmPwd) {
+              addSystemMessage("New password and confirmation do not match. Aborting.");
+              return;
+            }
+            // Call API to change admin password
+            try {
+              const usernameForChange = originalUsernameRef.current || user?.username || null;
+              const payload = {
+                username: usernameForChange,
+                oldPassword: oldPwd,
+                newPassword: newPwd,
+              };
+              const res = await api.changeAdminPassword(payload);
+              if (res && res.success) {
+                addSystemMessage("Admin password changed successfully.");
+              } else {
+                addSystemMessage((res && (res.error || res.message)) || "Failed to change admin password.");
+              }
+            } catch (err) {
+              addSystemMessage((err && err.message) || "Failed to change admin password.");
+            }
+            return;
+          }
+        } catch (err) {
+          setAdminPassFlow(null);
+          setAdminLoginMode(false);
+          setAdminPassword("");
+          addSystemMessage("Password change failed. Try again.");
+          return;
+        }
+      }
       // Allow user to type 'cancel' to abort admin login
       if (pwd.toLowerCase() === "cancel") {
         setAdminLoginMode(false);
@@ -394,6 +460,20 @@ function MyDiary() {
       } catch (err) {
         addSystemMessage(`Failed to fetch users: ${err.message || err}`);
       }
+      return;
+    }
+
+    // Admin-only: start password change flow
+    if (normalized === "pass change" || normalized === "change pass" || normalized === "admin pass change") {
+      if (!adminMode) {
+        addSystemMessage("Permission denied. 'pass change' is admin-only.");
+        return;
+      }
+      // begin interactive password-change flow handled by handleAdminPasswordInput
+      setAdminPassFlow({ step: "old", data: {} });
+      setAdminLoginMode(true);
+      setAdminPassword("");
+      addSystemMessage("Admin password change initiated. Enter current (old) password (or type 'cancel' to abort):");
       return;
     }
 
