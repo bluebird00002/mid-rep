@@ -181,31 +181,40 @@ function CreateAccount() {
                           setUsername(v);
                           clearFieldError("username");
                           setUsernameAvailable(null);
-                          // debounce live-check
+                          // immediate small-length check: show red X and error when < 3 chars
+                          if (!v || v.trim().length < 3) {
+                            if (v && v.trim().length > 0) {
+                              setUsernameAvailable(false);
+                              setErrors((prev) => ({ ...prev, username: "Username must be at least 3 characters" }));
+                            } else {
+                              setUsernameAvailable(null);
+                              setErrors((prev) => ({ ...prev, username: undefined }));
+                            }
+                            if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
+                            return;
+                          }
+                          // debounce live-check (300ms)
                           if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
-                          if (v && v.trim().length >= 3) {
-                            usernameCheckRef.current = setTimeout(async () => {
-                              // quick client-side reserved check
-                              if (/ceo/i.test(v)) {
+                          usernameCheckRef.current = setTimeout(async () => {
+                            // quick client-side reserved check
+                            if (/ceo/i.test(v)) {
+                              setUsernameAvailable(false);
+                              setErrors((prev) => ({ ...prev, username: "Username already exists" }));
+                              return;
+                            }
+                            try {
+                              const res = await api.verifyUsername({ username: v.trim() });
+                              if (res && res.exists) {
                                 setUsernameAvailable(false);
                                 setErrors((prev) => ({ ...prev, username: "Username already exists" }));
-                                return;
+                              } else {
+                                setUsernameAvailable(true);
+                                setErrors((prev) => ({ ...prev, username: undefined }));
                               }
-                              try {
-                                const res = await api.verifyUsername({ username: v.trim() });
-                                if (res && res.exists) {
-                                  setUsernameAvailable(false);
-                                  setErrors((prev) => ({ ...prev, username: "Username already exists" }));
-                                } else {
-                                  setUsernameAvailable(true);
-                                  setErrors((prev) => ({ ...prev, username: undefined }));
-                                }
-                              } catch (err) {
-                                // ignore transient errors
-                                console.warn("Username check failed:", err.message || err);
-                              }
-                            }, 500);
-                          }
+                            } catch (err) {
+                              console.warn("Username check failed:", err.message || err);
+                            }
+                          }, 300);
                         }}
                         onBlur={() => {
                           if (!username.trim()) {
