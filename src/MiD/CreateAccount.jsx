@@ -6,6 +6,7 @@ import {
   Eye,
   EyeOff,
   CheckCircle,
+  X,
   Copyright,
   AlertCircle,
   Loader2,
@@ -102,7 +103,13 @@ function CreateAccount() {
           navigate("/MiD/Welcome");
         }, 2000);
       } else {
-        showError(result.error || "Registration failed");
+        // If username already exists, show inline error styled like other form errors
+        const msg = result.error || "Registration failed";
+        if (msg.toLowerCase().includes("username")) {
+          setErrors((prev) => ({ ...prev, username: msg }));
+        } else {
+          showError(msg);
+        }
       }
     } catch (error) {
       setLoading(false);
@@ -212,7 +219,13 @@ function CreateAccount() {
                         autoComplete="username"
                       />
                       {username && username.length >= 3 && (
-                        <CheckCircle size={20} className="input-check" />
+                        usernameAvailable === false ? (
+                          <X size={20} className="input-check input-check-error" />
+                        ) : usernameAvailable === true ? (
+                          <CheckCircle size={20} className="input-check input-check-success" />
+                        ) : (
+                          <CheckCircle size={20} className="input-check" style={{ opacity: 0.35 }} />
+                        )
                       )}
                     </div>
                     {errors.username && (

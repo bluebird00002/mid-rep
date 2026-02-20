@@ -147,9 +147,7 @@ function Home() {
                         disabled={loading}
                         autoComplete="username"
                       />
-                      {username && username.length >= 3 && (
-                        <CheckCircle size={20} className="input-check" />
-                      )}
+                      {/* No live-check icon on login form */}
                     </div>
                     {errors.username && (
                       <div className="form-error">

@@ -257,7 +257,18 @@
 .input-check {
     color: #4ade80;
     flex-shrink: 0;
-    animation: scaleIn 0.3s ease-out;
+    animation: scaleIn 0.2s ease-out;
+    transition: transform 0.18s ease, opacity 0.18s ease, color 0.18s ease;
+}
+
+.input-check-error {
+    color: #ff4444;
+    transform: scale(1.02);
+}
+
+.input-check-success {
+    color: #4ade80;
+    transform: scale(1.02);
 }
 
 /* ============ PASSWORD VISIBILITY TOGGLE ============ */
@@ -295,6 +306,16 @@
 
 .form-error svg {
     flex-shrink: 0;
+}
+
+.form-hint.success {
+    margin-top: 8px;
+    color: #4ade80;
+    font-size: 0.9rem;
+    background: rgba(74, 222, 128, 0.06);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(74, 222, 128, 0.12);
 }
 
 /* ============ FORM ACTIONS ============ */
