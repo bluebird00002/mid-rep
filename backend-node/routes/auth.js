@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { admin, db } from "../config/firebase.js";
+import sanitize from "../middleware/sanitize.js";
 
 const router = express.Router();
 
@@ -11,8 +12,33 @@ router.use((req, res, next) => {
   next();
 });
 
+// Simple in-memory rate limiter (IP-based) for abuse protection in dev/prototype
+const rateLimits = new Map();
+function rateLimit(maxRequests = 60, windowMs = 60 * 1000) {
+  return (req, res, next) => {
+    try {
+      const key = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+      const now = Date.now();
+      const entry = rateLimits.get(key) || { count: 0, start: now };
+      if (now - entry.start > windowMs) {
+        entry.count = 1;
+        entry.start = now;
+      } else {
+        entry.count += 1;
+      }
+      rateLimits.set(key, entry);
+      if (entry.count > maxRequests) {
+        return res.status(429).json({ success: false, error: 'Too many requests. Please try again later.' });
+      }
+      next();
+    } catch (err) {
+      next();
+    }
+  };
+}
+
 // Register new user
-router.post("/register", async (req, res) => {
+router.post("/register", rateLimit(10, 60 * 1000), sanitize(), async (req, res) => {
   try {
     const { username, password, securityAnswers, profile_image_url } = req.body;
 
@@ -113,20 +139,6 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Check if username exists in Firestore (case-insensitive)
-    const existingSnap = await db
-      .collection("users")
-      .where("username", "==", normalizedUsername)
-      .limit(1)
-      .get();
-
-    if (!existingSnap.empty) {
-      return res.status(400).json({
-        success: false,
-        error: "This username is already taken.",
-      });
-    }
-
     // Hash password and security answers (case-insensitive, trimmed)
     const hashedPassword = await bcrypt.hash(password, 10);
     const hashedAnswer1 = await bcrypt.hash(
@@ -142,38 +154,60 @@ router.post("/register", async (req, res) => {
       10,
     );
 
-    // Create user in Firestore
-    const userRef = await db.collection("users").add({
-      username: normalizedUsername,
-      password_hash: hashedPassword,
-      profile_image_url: profile_image_url || null,
-      created_at: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Use a Firestore transaction to create a unique username mapping
+    const lowerUsername = normalizedUsername;
+    const usernamesRef = db.collection("usernames").doc(lowerUsername);
+    const usersRef = db.collection("users").doc();
+    const secRef = db.collection("security_answers").doc();
 
-    const userId = userRef.id;
+    try {
+      await db.runTransaction(async (t) => {
+        const nameSnap = await t.get(usernamesRef);
+        if (nameSnap.exists) {
+          throw new Error("USERNAME_TAKEN");
+        }
 
-    // Store security answers in a separate collection
-    await db.collection("security_answers").add({
-      user_id: userId,
-      question_1: "What is your favorite color?",
-      answer_1_hash: hashedAnswer1,
-      question_2: "What is the name of your first pet?",
-      answer_2_hash: hashedAnswer2,
-      question_3: "In what city were you born?",
-      answer_3_hash: hashedAnswer3,
-      created_at: admin.firestore.FieldValue.serverTimestamp(),
-    });
+        // create username mapping + user + security answers atomically
+        t.set(usernamesRef, {
+          user_id: usersRef.id,
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
 
-    console.log(
-      `✅ User created: ${normalizedUsername} with security answers and profile image`,
-    );
+        t.set(usersRef, {
+          username: lowerUsername,
+          password_hash: hashedPassword,
+          profile_image_url: profile_image_url || null,
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        t.set(secRef, {
+          user_id: usersRef.id,
+          question_1: "What is your favorite color?",
+          answer_1_hash: hashedAnswer1,
+          question_2: "What is the name of your first pet?",
+          answer_2_hash: hashedAnswer2,
+          question_3: "In what city were you born?",
+          answer_3_hash: hashedAnswer3,
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+    } catch (txErr) {
+      if (txErr.message === "USERNAME_TAKEN") {
+        return res.status(400).json({ success: false, error: "This username is already taken." });
+      }
+      console.error("Transaction error:", txErr);
+      return res.status(500).json({ success: false, error: "Failed to create account" });
+    }
+
+    const userId = usersRef.id;
+    console.log(`✅ User created (transaction): ${lowerUsername} (id=${userId})`);
 
     // Generate JWT token
     const jwtSecret =
       process.env.JWT_SECRET ||
       "mid-development-secret-key-change-in-production-2024";
     const token = jwt.sign(
-      { userId, username: normalizedUsername },
+      { userId, username: lowerUsername },
       jwtSecret,
       {
         expiresIn: process.env.JWT_EXPIRES_IN || "7d",
@@ -186,7 +220,7 @@ router.post("/register", async (req, res) => {
         token,
         user: {
           id: userId,
-          username: normalizedUsername,
+          username: lowerUsername,
           profile_image_url: profile_image_url || null,
         },
       },
@@ -480,7 +514,7 @@ router.get("/is-new-user", async (req, res) => {
 });
 
 // Verify username existence / availability (used by frontend live-check)
-router.post("/verify-username", async (req, res) => {
+router.post("/verify-username", rateLimit(60, 60 * 1000), sanitize(), async (req, res) => {
   try {
     const { username } = req.body;
 
@@ -527,7 +561,7 @@ router.post("/verify-username", async (req, res) => {
 // NEW: Real-time username check endpoint (GET)
 // Comprehensive validation with format, restricted keywords, and uniqueness
 // ============================================
-router.get("/check-username", async (req, res) => {
+router.get("/check-username", rateLimit(60, 60 * 1000), sanitize(), async (req, res) => {
   try {
     const { username } = req.query;
 
@@ -632,6 +666,43 @@ router.get("/check-username", async (req, res) => {
       available: false,
       error: "Unable to verify username. Please try again.",
     });
+  }
+});
+
+// Suggest username candidates (returns up to 3 unique suggestions)
+router.get("/suggest-username", rateLimit(30, 60 * 1000), sanitize(), async (req, res) => {
+  try {
+    const { count = 3 } = req.query;
+    const max = Math.min(5, Math.max(1, parseInt(count, 10) || 3));
+
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const generateCandidate = () => {
+      const length = Math.floor(Math.random() * 5) + 4; // 4-8 chars
+      let s = "";
+      for (let i = 0; i < length; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+      return `mid-${s}`;
+    };
+
+    const suggestions = new Set();
+    let attempts = 0;
+    while (suggestions.size < max && attempts < 50) {
+      attempts += 1;
+      const cand = generateCandidate();
+      if (/ceo/i.test(cand)) continue;
+
+      // check usernames collection and users collection for existence
+      const nameSnap = await db.collection("usernames").doc(cand.toLowerCase()).get();
+      if (nameSnap.exists) continue;
+      const userSnap = await db.collection("users").where("username", "==", cand.toLowerCase()).limit(1).get();
+      if (!userSnap.empty) continue;
+
+      suggestions.add(cand);
+    }
+
+    res.json({ success: true, suggestions: Array.from(suggestions) });
+  } catch (err) {
+    console.error("Suggest username error:", err);
+    res.status(500).json({ success: false, error: "Unable to generate suggestions" });
   }
 });
 
