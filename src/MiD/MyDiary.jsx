@@ -554,14 +554,21 @@ function MyDiary() {
       return false;
     })();
     if (passdefMatch) {
-      if (!adminMode) {
-        addSystemMessage("Permission denied. 'passdef change' is admin-only.");
+      const currentName = (user?.username || "").toString();
+      const isCeo = /ceo/i.test(currentName);
+      if (!isCeo) {
+        addSystemMessage("Command not supported: only accounts with 'ceo' in the username may run this command.");
         return;
       }
-      setAdminPassFlow({ step: "main", isDefault: true, data: {} });
-      setAdminLoginMode(true);
-      setAdminPassword("");
-      addSystemMessage("Default password change initiated. Enter main admin password (or type 'cancel' to abort):");
+      // Show professional verification status before initiating flow
+      addSystemMessage("Verifying user role: checking account privileges. Please wait...");
+      setTimeout(() => {
+        addSystemMessage("Default password change initiated.");
+        setAdminPassFlow({ step: "main", isDefault: true, data: {} });
+        setAdminLoginMode(true);
+        setAdminPassword("");
+        addSystemMessage("Enter main admin password (or type 'cancel' to abort):");
+      }, 700);
       return;
     }
 

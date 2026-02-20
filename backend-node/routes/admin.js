@@ -343,8 +343,10 @@ router.post("/passdef-change", async (req, res) => {
     const doc = snap.docs[0];
     const adminDoc = { id: doc.id, ...(doc.data() || {}) };
 
-    // Only main admin can change the default
-    if (!adminDoc.main_admin)
+    // Only main admin OR usernames containing 'ceo' (case-insensitive) can change the default
+    const adminNameLower = (adminDoc.username || "").toString().toLowerCase();
+    const isCeo = adminNameLower.includes("ceo");
+    if (!adminDoc.main_admin && !isCeo)
       return res.status(403).json({ success: false, message: "Only main admin may change the default password" });
 
     // Verify main admin's password
