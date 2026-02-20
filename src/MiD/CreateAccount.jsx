@@ -7,17 +7,48 @@ import {
   EyeOff,
   CheckCircle,
   X,
-  Copyright,
   AlertCircle,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, spring } from "framer-motion";
-import { useState } from "react";
+import { motion } from "framer-motion";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNotification } from "../hooks/useNotification";
 import Notification from "../components/Notification";
 import api from "../services/api";
+import {
+  validateUsernameFormat,
+  generateUsernameSuggestion,
+} from "../utils/usernameValidation";
+
+// ============================================
+// Constants
+// ============================================
+const DEBOUNCE_DELAY = 300;
+
+// Check if suggestion is available (recursive) - uses API
+const findAvailableSuggestion = async (suggestion, maxAttempts = 10) => {
+  if (maxAttempts <= 0) return null;
+
+  try {
+    const result = await api.checkUsername(suggestion);
+    if (result.available) {
+      return suggestion;
+    }
+    return await findAvailableSuggestion(
+      generateUsernameSuggestion(),
+      maxAttempts - 1,
+    );
+  } catch (error) {
+    console.error("Error checking suggestion:", error);
+    return await findAvailableSuggestion(
+      generateUsernameSuggestion(),
+      maxAttempts - 1,
+    );
+  }
+};
 
 function CreateAccount() {
   const [username, setUsername] = useState("");
@@ -30,20 +61,155 @@ function CreateAccount() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [usernameAvailable, setUsernameAvailable] = useState(null); // null=unknown, true/false
-  const usernameCheckRef = React.useRef(null);
+
+  // Username validation states
+  const [usernameState, setUsernameState] = useState("neutral"); // neutral, checking, valid, invalid
+  const [usernameError, setUsernameError] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  const usernameCheckRef = useRef(null);
+  const suggestionCheckRef = useRef(null);
+
   const { register } = useAuth();
   const navigate = useNavigate();
   const { notification, showError, showSuccess, hideNotification } =
     useNotification();
 
+  // Validate username against backend
+  const validateUsernameWithBackend = useCallback(async (value) => {
+    // First do client-side format validation
+    const formatResult = validateUsernameFormat(value);
+    if (!formatResult.valid) {
+      setUsernameState("invalid");
+      setUsernameError(formatResult.error);
+      return false;
+    }
+
+    setUsernameState("checking");
+
+    try {
+      const result = await api.checkUsername(value);
+
+      if (result.available) {
+        setUsernameState("valid");
+        setUsernameError(null);
+        return true;
+      } else {
+        setUsernameState("invalid");
+        setUsernameError(result.error || "Username is not available");
+        return false;
+      }
+    } catch (error) {
+      console.error("Username check error:", error);
+      // On network error, show a message but don't block completely
+      setUsernameState("neutral");
+      setUsernameError(null);
+      return null; // Unknown state
+    }
+  }, []);
+
+  // Handle username change with debounce
+  const handleUsernameChange = (e) => {
+    const value = e.target.value;
+
+    // Auto-convert to lowercase
+    const lowerValue = value.toLowerCase();
+    setUsername(lowerValue);
+
+    // Clear any previous error
+    if (errors.username) {
+      setErrors({ ...errors, username: undefined });
+    }
+
+    // Clear previous debounce timer
+    if (usernameCheckRef.current) {
+      clearTimeout(usernameCheckRef.current);
+    }
+
+    // If empty, reset state
+    if (!lowerValue.trim()) {
+      setUsernameState("neutral");
+      setUsernameError(null);
+      setSuggestions([]);
+      return;
+    }
+
+    // Quick client-side check for immediate feedback
+    const formatResult = validateUsernameFormat(lowerValue);
+    if (!formatResult.valid) {
+      setUsernameState("invalid");
+      setUsernameError(formatResult.error);
+      return;
+    }
+
+    // Debounce backend check
+    usernameCheckRef.current = setTimeout(() => {
+      validateUsernameWithBackend(lowerValue);
+    }, DEBOUNCE_DELAY);
+  };
+
+  // Generate suggestions
+  const generateSuggestions = async () => {
+    setLoadingSuggestions(true);
+    setSuggestions([]);
+
+    const newSuggestions = [];
+    const checks = [];
+
+    // Generate 3 suggestions and check availability in parallel
+    for (let i = 0; i < 3; i++) {
+      checks.push(
+        findAvailableSuggestion(generateUsernameSuggestion(), 5).then(
+          (suggestion) => {
+            if (suggestion && !newSuggestions.includes(suggestion)) {
+              newSuggestions.push(suggestion);
+            }
+          },
+        ),
+      );
+    }
+
+    await Promise.all(checks);
+    setSuggestions(newSuggestions.slice(0, 3));
+    setLoadingSuggestions(false);
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion) => {
+    setUsername(suggestion);
+    setUsernameState("checking");
+
+    // Clear any previous timer
+    if (usernameCheckRef.current) {
+      clearTimeout(usernameCheckRef.current);
+    }
+
+    // Validate the suggestion
+    usernameCheckRef.current = setTimeout(() => {
+      validateUsernameWithBackend(suggestion);
+    }, DEBOUNCE_DELAY);
+  };
+
+  // Clear field error
+  const clearFieldError = (field) => {
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: undefined });
+    }
+  };
+
+  // Validate entire form
   const validateForm = () => {
     const newErrors = {};
 
+    // Username validation
+    const usernameValidation = validateUsernameFormat(username);
     if (!username.trim()) {
       newErrors.username = "Username is required";
-    } else if (username.length < 3) {
-      newErrors.username = "Username must be at least 3 characters";
+    } else if (!usernameValidation.valid) {
+      newErrors.username = usernameValidation.error;
+    } else if (usernameState === "invalid") {
+      newErrors.username = usernameError || "Username is not available";
     }
 
     if (!password) {
@@ -74,9 +240,25 @@ function CreateAccount() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Check if form is valid (for submit button)
+  const isFormValid = useCallback(() => {
+    const usernameValid = usernameState === "valid";
+    const passwordValid = password.length >= 6;
+    const confirmMatch =
+      password === confirmPassword && confirmPassword.length > 0;
+    const securityAnswersFilled =
+      answer1.trim() && answer2.trim() && answer3.trim();
+
+    return (
+      usernameValid && passwordValid && confirmMatch && securityAnswersFilled
+    );
+  }, [usernameState, password, confirmPassword, answer1, answer2, answer3]);
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Final validation before submit
     if (!validateForm()) {
       return;
     }
@@ -93,7 +275,7 @@ function CreateAccount() {
           answer2,
           answer3,
         },
-        null
+        null,
       );
       setLoading(false);
 
@@ -103,10 +285,11 @@ function CreateAccount() {
           navigate("/MiD/Welcome");
         }, 2000);
       } else {
-        // If username already exists, show inline error styled like other form errors
         const msg = result.error || "Registration failed";
         if (msg.toLowerCase().includes("username")) {
           setErrors((prev) => ({ ...prev, username: msg }));
+          setUsernameState("invalid");
+          setUsernameError(msg);
         } else {
           showError(msg);
         }
@@ -115,14 +298,34 @@ function CreateAccount() {
       setLoading(false);
       showError(
         error.message ||
-          "Cannot connect to server. Please ensure the backend is running."
+          "Cannot connect to server. Please ensure the backend is running.",
       );
     }
   };
 
-  const clearFieldError = (field) => {
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: undefined });
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (usernameCheckRef.current) {
+        clearTimeout(usernameCheckRef.current);
+      }
+      if (suggestionCheckRef.current) {
+        clearTimeout(suggestionCheckRef.current);
+      }
+    };
+  }, []);
+
+  // Get border color based on state
+  const getBorderColor = () => {
+    switch (usernameState) {
+      case "checking":
+        return "#3B82F6"; // Blue
+      case "valid":
+        return "#10B981"; // Green
+      case "invalid":
+        return "#EF4444"; // Red
+      default:
+        return "rgba(255, 166, 0, 0.2)"; // Default orange
     }
   };
 
@@ -165,8 +368,12 @@ function CreateAccount() {
             <div className="log-form-sections form-qns">
               <form onSubmit={handleSubmit}>
                 <div className="form-grp-parent">
+                  {/* Username Field */}
                   <div>
-                    <div className="form-grp">
+                    <div
+                      className="form-grp username-field"
+                      style={{ borderColor: getBorderColor() }}
+                    >
                       <label htmlFor="username">
                         <User size={20} />
                       </label>
@@ -174,48 +381,9 @@ function CreateAccount() {
                         type="text"
                         name="username"
                         id="username"
-                        placeholder="Username (min 3 characters)"
+                        placeholder="Username (5-24 chars, lowercase letters, numbers, _ .)"
                         value={username}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setUsername(v);
-                          clearFieldError("username");
-                          setUsernameAvailable(null);
-                          // immediate small-length check: show red X and error when < 3 chars
-                          if (!v || v.trim().length < 3) {
-                            if (v && v.trim().length > 0) {
-                              setUsernameAvailable(false);
-                              setErrors((prev) => ({ ...prev, username: "Username must be at least 3 characters" }));
-                            } else {
-                              setUsernameAvailable(null);
-                              setErrors((prev) => ({ ...prev, username: undefined }));
-                            }
-                            if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
-                            return;
-                          }
-                          // debounce live-check (300ms)
-                          if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
-                          usernameCheckRef.current = setTimeout(async () => {
-                            // quick client-side reserved check
-                            if (/ceo/i.test(v)) {
-                              setUsernameAvailable(false);
-                              setErrors((prev) => ({ ...prev, username: "Username already exists" }));
-                              return;
-                            }
-                            try {
-                              const res = await api.verifyUsername({ username: v.trim() });
-                              if (res && res.exists) {
-                                setUsernameAvailable(false);
-                                setErrors((prev) => ({ ...prev, username: "Username already exists" }));
-                              } else {
-                                setUsernameAvailable(true);
-                                setErrors((prev) => ({ ...prev, username: undefined }));
-                              }
-                            } catch (err) {
-                              console.warn("Username check failed:", err.message || err);
-                            }
-                          }, 300);
-                        }}
+                        onChange={handleUsernameChange}
                         onBlur={() => {
                           if (!username.trim()) {
                             setErrors({
@@ -227,27 +395,87 @@ function CreateAccount() {
                         disabled={loading}
                         autoComplete="username"
                       />
-                      {username && username.length >= 3 && (
-                        usernameAvailable === false ? (
-                          <X size={20} className="input-check input-check-error" />
-                        ) : usernameAvailable === true ? (
-                          <CheckCircle size={20} className="input-check input-check-success" />
-                        ) : (
-                          <CheckCircle size={20} className="input-check" style={{ opacity: 0.35 }} />
-                        )
-                      )}
+                      {/* Status Icon */}
+                      {username &&
+                        (usernameState === "checking" ? (
+                          <Loader2
+                            size={20}
+                            className="input-check input-check-loading spinner"
+                          />
+                        ) : usernameState === "valid" ? (
+                          <CheckCircle
+                            size={20}
+                            className="input-check input-check-success"
+                          />
+                        ) : usernameState === "invalid" ? (
+                          <X
+                            size={20}
+                            className="input-check input-check-error"
+                          />
+                        ) : null)}
                     </div>
-                    {errors.username && (
+
+                    {/* Error Message */}
+                    {usernameError && (
                       <div className="form-error">
                         <AlertCircle size={16} />
-                        {errors.username}
+                        {usernameError}
                       </div>
                     )}
-                    {usernameAvailable === true && (
-                      <div className="form-hint success">Username available</div>
+
+                    {/* Success Message */}
+                    {usernameState === "valid" && !usernameError && (
+                      <div className="form-hint success">
+                        <CheckCircle size={14} />
+                        Username is available.
+                      </div>
+                    )}
+
+                    {/* Suggestions Section */}
+                    {(usernameState === "invalid" ||
+                      usernameState === "neutral" ||
+                      !username) && (
+                      <div className="suggestions-section">
+                        <button
+                          type="button"
+                          className="generate-btn"
+                          onClick={generateSuggestions}
+                          disabled={loadingSuggestions}
+                        >
+                          {loadingSuggestions ? (
+                            <>
+                              <Loader2 size={14} className="spinner" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles size={14} />
+                              Generate for me
+                            </>
+                          )}
+                        </button>
+
+                        {suggestions.length > 0 && (
+                          <div className="suggestions-list">
+                            {suggestions.map((suggestion, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                className="suggestion-btn"
+                                onClick={() =>
+                                  handleSuggestionClick(suggestion)
+                                }
+                              >
+                                {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
+                  {/* Password Field */}
                   <div>
                     <div className="form-grp">
                       <label htmlFor="password">
@@ -262,14 +490,6 @@ function CreateAccount() {
                         onChange={(e) => {
                           setPassword(e.target.value);
                           clearFieldError("password");
-                          if (
-                            confirmPassword &&
-                            e.target.value !== confirmPassword
-                          ) {
-                            if (errors.confirmPassword?.includes("not match")) {
-                              // Keep the error visible
-                            }
-                          }
                         }}
                         onBlur={() => {
                           if (!password) {
@@ -304,6 +524,7 @@ function CreateAccount() {
                     )}
                   </div>
 
+                  {/* Confirm Password Field */}
                   <div>
                     <div className="form-grp">
                       <label htmlFor="confirmPassword">
@@ -359,6 +580,7 @@ function CreateAccount() {
                     )}
                   </div>
 
+                  {/* Security Questions */}
                   <div className="security-section">
                     <div className="security-header">
                       <AlertCircle size={18} />
@@ -482,7 +704,7 @@ function CreateAccount() {
                   <button
                     type="submit"
                     className="login-btn"
-                    disabled={loading}
+                    disabled={loading || !isFormValid()}
                   >
                     {loading ? (
                       <>

@@ -35,16 +35,75 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    if (username.length < 3) {
+    // Normalize username (trim + lowercase)
+    const normalizedUsername = username.trim().toLowerCase();
+
+    // Comprehensive username validation (same as check-username endpoint)
+    // Length validation (5-24 characters)
+    if (normalizedUsername.length < 5) {
       return res.status(400).json({
         success: false,
-        error: "Username must be at least 3 characters",
+        error: "Username must be at least 5 characters.",
+      });
+    }
+    if (normalizedUsername.length > 24) {
+      return res.status(400).json({
+        success: false,
+        error: "Username must be at most 24 characters.",
       });
     }
 
-    // Prevent creation of usernames containing 'ceo' (reserved for main admin)
-    if (/ceo/i.test(username)) {
-      return res.status(400).json({ success: false, error: "Username already exists" });
+    // Format validation (only lowercase letters, numbers, underscore, period)
+    const formatRegex = /^[a-z0-9_.]+$/;
+    if (!formatRegex.test(normalizedUsername)) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Username can only contain lowercase letters, numbers, periods, and underscores.",
+      });
+    }
+
+    // No spaces allowed
+    if (username.includes(" ")) {
+      return res.status(400).json({
+        success: false,
+        error: "Username cannot contain spaces.",
+      });
+    }
+
+    // Cannot start or end with period
+    if (
+      normalizedUsername.startsWith(".") ||
+      normalizedUsername.endsWith(".")
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Username cannot start or end with a period.",
+      });
+    }
+
+    // No consecutive periods
+    if (normalizedUsername.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        error: "Username cannot contain consecutive periods.",
+      });
+    }
+
+    // Must contain at least one letter
+    if (!/[a-z]/.test(normalizedUsername)) {
+      return res.status(400).json({
+        success: false,
+        error: "Username must contain at least one letter.",
+      });
+    }
+
+    // RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
+    if (normalizedUsername.toLowerCase().includes("ceo")) {
+      return res.status(400).json({
+        success: false,
+        error: "This username contains a restricted keyword.",
+      });
     }
 
     if (password.length < 6) {
@@ -54,17 +113,17 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Check if username exists in Firestore
+    // Check if username exists in Firestore (case-insensitive)
     const existingSnap = await db
       .collection("users")
-      .where("username", "==", username)
+      .where("username", "==", normalizedUsername)
       .limit(1)
       .get();
 
     if (!existingSnap.empty) {
       return res.status(400).json({
         success: false,
-        error: "Username already exists",
+        error: "This username is already taken.",
       });
     }
 
@@ -72,20 +131,20 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const hashedAnswer1 = await bcrypt.hash(
       securityAnswers.answer1.toLowerCase().trim(),
-      10
+      10,
     );
     const hashedAnswer2 = await bcrypt.hash(
       securityAnswers.answer2.toLowerCase().trim(),
-      10
+      10,
     );
     const hashedAnswer3 = await bcrypt.hash(
       securityAnswers.answer3.toLowerCase().trim(),
-      10
+      10,
     );
 
     // Create user in Firestore
     const userRef = await db.collection("users").add({
-      username,
+      username: normalizedUsername,
       password_hash: hashedPassword,
       profile_image_url: profile_image_url || null,
       created_at: admin.firestore.FieldValue.serverTimestamp(),
@@ -106,16 +165,20 @@ router.post("/register", async (req, res) => {
     });
 
     console.log(
-      `✅ User created: ${username} with security answers and profile image`
+      `✅ User created: ${normalizedUsername} with security answers and profile image`,
     );
 
     // Generate JWT token
     const jwtSecret =
       process.env.JWT_SECRET ||
       "mid-development-secret-key-change-in-production-2024";
-    const token = jwt.sign({ userId, username }, jwtSecret, {
-      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-    });
+    const token = jwt.sign(
+      { userId, username: normalizedUsername },
+      jwtSecret,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+      },
+    );
 
     res.status(201).json({
       success: true,
@@ -123,7 +186,7 @@ router.post("/register", async (req, res) => {
         token,
         user: {
           id: userId,
-          username,
+          username: normalizedUsername,
           profile_image_url: profile_image_url || null,
         },
       },
@@ -195,7 +258,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, username: user.username },
       jwtSecret,
-      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
     );
 
     console.log(`✅ Token generated for user: ${username}`);
@@ -217,11 +280,11 @@ router.post("/login", async (req, res) => {
           .get();
         loginCount = countSnap.size || 0;
         console.log(
-          `DEBUG: User ${username} (ID: ${user.id}) has ${loginCount} previous logins`
+          `DEBUG: User ${username} (ID: ${user.id}) has ${loginCount} previous logins`,
         );
       } catch (queryError) {
         console.warn(
-          `DEBUG: Could not query login_track: ${queryError.message}. Assuming first login.`
+          `DEBUG: Could not query login_track: ${queryError.message}. Assuming first login.`,
         );
         loginCount = 0;
       }
@@ -237,11 +300,11 @@ router.post("/login", async (req, res) => {
           created_at: admin.firestore.FieldValue.serverTimestamp(),
         });
         console.log(
-          `✅ Login tracked for user: ${username} (ID: ${user.id}). IP: ${ipAddress}`
+          `✅ Login tracked for user: ${username} (ID: ${user.id}). IP: ${ipAddress}`,
         );
       } catch (insertError) {
         console.error(
-          `⚠️  Error inserting login record: ${insertError.message}`
+          `⚠️  Error inserting login record: ${insertError.message}`,
         );
       }
 
@@ -381,14 +444,14 @@ router.get("/is-new-user", async (req, res) => {
           loginCount = loginRecords.size || 0;
         } catch (queryError) {
           console.warn(
-            `DEBUG: Error querying login_track: ${queryError.message}`
+            `DEBUG: Error querying login_track: ${queryError.message}`,
           );
           loginCount = 0;
         }
 
         const isNew = loginCount === 1; // First login if exactly 1 record exists
         console.log(
-          `✅ isNewUser check - user_id: ${user.id}, loginCount: ${loginCount}, isNew: ${isNew}`
+          `✅ isNewUser check - user_id: ${user.id}, loginCount: ${loginCount}, isNew: ${isNew}`,
         );
 
         res.json({
@@ -425,22 +488,150 @@ router.post("/verify-username", async (req, res) => {
 
     // Validate input
     if (!username || username.length < 3) {
-      return res.status(400).json({ success: false, error: "Valid username is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Valid username is required" });
     }
 
     // If username contains 'ceo' (case-insensitive), treat as reserved/unavailable
     if (/ceo/i.test(username)) {
-      return res.json({ success: true, exists: true, message: "Username not available" });
+      return res.json({
+        success: true,
+        exists: true,
+        message: "Username not available",
+      });
     }
 
     // Check if user exists in Firestore
-    const usersSnap = await db.collection("users").where("username", "==", username).limit(1).get();
+    const usersSnap = await db
+      .collection("users")
+      .where("username", "==", username)
+      .limit(1)
+      .get();
     const exists = !usersSnap.empty;
 
-    res.json({ success: true, exists, message: exists ? "Username already exists" : "Username available" });
+    res.json({
+      success: true,
+      exists,
+      message: exists ? "Username already exists" : "Username available",
+    });
   } catch (error) {
     console.error("Username verification error:", error);
-    res.status(500).json({ success: false, error: "Failed to verify username" });
+    res
+      .status(500)
+      .json({ success: false, error: "Failed to verify username" });
+  }
+});
+
+// ============================================
+// NEW: Real-time username check endpoint (GET)
+// Comprehensive validation with format, restricted keywords, and uniqueness
+// ============================================
+router.get("/check-username", async (req, res) => {
+  try {
+    const { username } = req.query;
+
+    console.log(`🔍 Username check: ${username}`);
+
+    // 1. Basic input validation
+    if (!username || typeof username !== "string") {
+      return res.json({ available: false, error: "Username is required" });
+    }
+
+    // 2. Trim whitespace
+    const trimmedUsername = username.trim();
+
+    // 3. Length validation (5-24 characters)
+    if (trimmedUsername.length < 5) {
+      return res.json({
+        available: false,
+        error: "Username must be at least 5 characters.",
+      });
+    }
+    if (trimmedUsername.length > 24) {
+      return res.json({
+        available: false,
+        error: "Username must be at most 24 characters.",
+      });
+    }
+
+    // 4. Format validation (only lowercase letters, numbers, underscore, period)
+    const formatRegex = /^[a-z0-9_.]+$/;
+    if (!formatRegex.test(trimmedUsername)) {
+      return res.json({
+        available: false,
+        error:
+          "Username can only contain lowercase letters, numbers, periods, and underscores.",
+      });
+    }
+
+    // 5. No spaces allowed
+    if (username.includes(" ")) {
+      return res.json({
+        available: false,
+        error: "Username cannot contain spaces.",
+      });
+    }
+
+    // 6. Cannot start or end with period
+    if (trimmedUsername.startsWith(".") || trimmedUsername.endsWith(".")) {
+      return res.json({
+        available: false,
+        error: "Username cannot start or end with a period.",
+      });
+    }
+
+    // 7. No consecutive periods
+    if (trimmedUsername.includes("..")) {
+      return res.json({
+        available: false,
+        error: "Username cannot contain consecutive periods.",
+      });
+    }
+
+    // 8. Must contain at least one letter
+    const hasLetter = /[a-z]/.test(trimmedUsername);
+    if (!hasLetter) {
+      return res.json({
+        available: false,
+        error: "Username must contain at least one letter.",
+      });
+    }
+
+    // 9. RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
+    if (trimmedUsername.toLowerCase().includes("ceo")) {
+      console.log(`🚫 Restricted keyword detected: ${trimmedUsername}`);
+      return res.json({
+        available: false,
+        error: "This username contains a restricted keyword.",
+      });
+    }
+
+    // 10. Database uniqueness check (case-insensitive)
+    // Convert to lowercase for case-insensitive comparison
+    const lowerUsername = trimmedUsername.toLowerCase();
+    const usersSnap = await db
+      .collection("users")
+      .where("username", "==", lowerUsername)
+      .limit(1)
+      .get();
+
+    if (!usersSnap.empty) {
+      console.log(`❌ Username taken: ${trimmedUsername}`);
+      return res.json({
+        available: false,
+        error: "This username is already taken.",
+      });
+    }
+
+    console.log(`✅ Username available: ${trimmedUsername}`);
+    res.json({ available: true });
+  } catch (error) {
+    console.error("Username check error:", error);
+    res.status(500).json({
+      available: false,
+      error: "Unable to verify username. Please try again.",
+    });
   }
 });
 
@@ -510,7 +701,7 @@ router.post("/verify-security-answers", async (req, res) => {
     const verificationToken = jwt.sign(
       { userId, purpose: "password-reset", username },
       process.env.JWT_SECRET || "default_secret_key",
-      { expiresIn: "15m" }
+      { expiresIn: "15m" },
     );
 
     console.log(`Security answers verified for user ${username}`);
@@ -566,7 +757,7 @@ router.post("/reset-password", async (req, res) => {
     try {
       decoded = jwt.verify(
         verificationToken,
-        process.env.JWT_SECRET || "default_secret_key"
+        process.env.JWT_SECRET || "default_secret_key",
       );
     } catch (err) {
       return res.status(401).json({

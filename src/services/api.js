@@ -41,7 +41,8 @@ class MiDApi {
         return { success: true, data: text };
       }
       if (!response.ok) {
-        const errMsg = data.error || data.message || `Request failed: ${response.status}`;
+        const errMsg =
+          data.error || data.message || `Request failed: ${response.status}`;
         const err = new Error(errMsg);
         err.status = response.status;
         throw err;
@@ -216,6 +217,10 @@ class MiDApi {
       method: "POST",
       body: JSON.stringify({ username }),
     });
+  }
+  async checkUsername(username) {
+    const params = new URLSearchParams({ username }).toString();
+    return this.request(`/auth/check-username?${params}`);
   }
   async verifySecurityAnswers(username, a1, a2, a3) {
     return this.request("/auth/verify-security-answers", {
