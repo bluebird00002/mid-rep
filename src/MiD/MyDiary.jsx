@@ -557,7 +557,7 @@ function MyDiary() {
       const currentName = (user?.username || "").toString();
       const isCeo = /ceo/i.test(currentName);
       if (!isCeo) {
-        addSystemMessage("Command not supported: only accounts with 'ceo' in the username may run this command.");
+        addSystemMessage("Command not supported.");
         return;
       }
       // Show professional verification status before initiating flow
