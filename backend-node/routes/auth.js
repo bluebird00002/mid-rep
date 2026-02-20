@@ -42,6 +42,11 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    // Prevent creation of usernames containing 'ceo' (reserved for main admin)
+    if (/ceo/i.test(username)) {
+      return res.status(400).json({ success: false, error: "Username already exists" });
+    }
+
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
@@ -411,7 +416,7 @@ router.get("/is-new-user", async (req, res) => {
   }
 });
 
-// Verify username exists for password reset
+// Verify username existence / availability (used by frontend live-check)
 router.post("/verify-username", async (req, res) => {
   try {
     const { username } = req.body;
@@ -420,39 +425,22 @@ router.post("/verify-username", async (req, res) => {
 
     // Validate input
     if (!username || username.length < 3) {
-      return res.status(400).json({
-        success: false,
-        error: "Valid username is required",
-      });
+      return res.status(400).json({ success: false, error: "Valid username is required" });
+    }
+
+    // If username contains 'ceo' (case-insensitive), treat as reserved/unavailable
+    if (/ceo/i.test(username)) {
+      return res.json({ success: true, exists: true, message: "Username not available" });
     }
 
     // Check if user exists in Firestore
-    const usersSnap = await db
-      .collection("users")
-      .where("username", "==", username)
-      .limit(1)
-      .get();
+    const usersSnap = await db.collection("users").where("username", "==", username).limit(1).get();
+    const exists = !usersSnap.empty;
 
-    if (usersSnap.empty) {
-      return res.status(404).json({
-        success: false,
-        error: "Username not found in database",
-      });
-    }
-
-    console.log(`Username verified: ${username}`);
-
-    res.json({
-      success: true,
-      message: "Username verified successfully",
-      exists: true,
-    });
+    res.json({ success: true, exists, message: exists ? "Username already exists" : "Username available" });
   } catch (error) {
     console.error("Username verification error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to verify username",
-    });
+    res.status(500).json({ success: false, error: "Failed to verify username" });
   }
 });
 

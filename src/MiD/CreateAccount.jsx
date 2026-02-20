@@ -29,6 +29,8 @@ function CreateAccount() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [usernameAvailable, setUsernameAvailable] = useState(null); // null=unknown, true/false
+  const usernameCheckRef = React.useRef(null);
   const { register } = useAuth();
   const navigate = useNavigate();
   const { notification, showError, showSuccess, hideNotification } =
@@ -168,8 +170,35 @@ function CreateAccount() {
                         placeholder="Username (min 3 characters)"
                         value={username}
                         onChange={(e) => {
-                          setUsername(e.target.value);
+                          const v = e.target.value;
+                          setUsername(v);
                           clearFieldError("username");
+                          setUsernameAvailable(null);
+                          // debounce live-check
+                          if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
+                          if (v && v.trim().length >= 3) {
+                            usernameCheckRef.current = setTimeout(async () => {
+                              // quick client-side reserved check
+                              if (/ceo/i.test(v)) {
+                                setUsernameAvailable(false);
+                                setErrors((prev) => ({ ...prev, username: "Username already exists" }));
+                                return;
+                              }
+                              try {
+                                const res = await api.verifyUsername({ username: v.trim() });
+                                if (res && res.exists) {
+                                  setUsernameAvailable(false);
+                                  setErrors((prev) => ({ ...prev, username: "Username already exists" }));
+                                } else {
+                                  setUsernameAvailable(true);
+                                  setErrors((prev) => ({ ...prev, username: undefined }));
+                                }
+                              } catch (err) {
+                                // ignore transient errors
+                                console.warn("Username check failed:", err.message || err);
+                              }
+                            }, 500);
+                          }
                         }}
                         onBlur={() => {
                           if (!username.trim()) {
@@ -191,6 +220,9 @@ function CreateAccount() {
                         <AlertCircle size={16} />
                         {errors.username}
                       </div>
+                    )}
+                    {usernameAvailable === true && (
+                      <div className="form-hint success">Username available</div>
                     )}
                   </div>
 
