@@ -329,9 +329,9 @@ router.get("/activity", async (req, res) => {
 
 // Change default admin password (only main admin may perform)
 router.post("/passdef-change", async (req, res) => {
-  const { username, adminPassword, newDefaultPassword } = req.body;
+  const { username, adminPassword, oldDefaultPassword, newDefaultPassword } = req.body;
   try {
-    if (!username || !adminPassword || !newDefaultPassword)
+    if (!username || !adminPassword || !oldDefaultPassword || !newDefaultPassword)
       return res.status(400).json({ success: false, message: "Missing parameters" });
 
     // Normalize admin username to <user>-admin form
@@ -347,29 +347,44 @@ router.post("/passdef-change", async (req, res) => {
     if (!adminDoc.main_admin)
       return res.status(403).json({ success: false, message: "Only main admin may change the default password" });
 
-    const ok = await bcrypt.compare((adminPassword || "").toString(), adminDoc.password_hash || "");
+    // Verify main admin's password
+    const adminPwd = (adminPassword || "").toString().trim();
+    let ok = false;
+    try {
+      ok = await bcrypt.compare(adminPwd, adminDoc.password_hash || "");
+    } catch (e) {
+      console.warn("bcrypt compare failed for admin auth:", e && e.message);
+      ok = false;
+    }
     if (!ok) return res.status(401).json({ success: false, message: "Incorrect admin password" });
+
+    // Fetch current default
+    const defSnap = await firestore.collection("admin_defaults").limit(1).get();
+    if (defSnap.empty)
+      return res.status(400).json({ success: false, message: "No default password set" });
+    const defDoc = defSnap.docs[0];
+    const defData = defDoc.data() || {};
+    const currentHash = defData.password_hash || null;
+    const providedOld = (oldDefaultPassword || "").toString().trim();
+    let oldMatch = false;
+    try {
+      oldMatch = currentHash ? await bcrypt.compare(providedOld, currentHash) : false;
+    } catch (e) {
+      console.warn("bcrypt compare failed for default password:", e && e.message);
+      oldMatch = false;
+    }
+    if (!oldMatch) return res.status(401).json({ success: false, message: "Incorrect current default password" });
 
     if (!newDefaultPassword || newDefaultPassword.length < 6)
       return res.status(400).json({ success: false, message: "New default password must be at least 6 characters" });
 
-    // Update or create default record
-    const defSnap = await firestore.collection("admin_defaults").limit(1).get();
+    // Update default record with new hash
     const newHash = await bcrypt.hash(newDefaultPassword.toString(), 10);
-    if (!defSnap.empty) {
-      const defDoc = defSnap.docs[0];
-      await firestore.collection("admin_defaults").doc(defDoc.id).update({
-        password_hash: newHash,
-        updated_by: adminDoc.id,
-        updated_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-      });
-    } else {
-      await firestore.collection("admin_defaults").doc().set({
-        password_hash: newHash,
-        created_by: adminDoc.id,
-        created_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-      });
-    }
+    await firestore.collection("admin_defaults").doc(defDoc.id).update({
+      password_hash: newHash,
+      updated_by: adminDoc.id,
+      updated_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+    });
 
     return res.json({ success: true, message: "Default admin password updated" });
   } catch (err) {

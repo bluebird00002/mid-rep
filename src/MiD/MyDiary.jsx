@@ -156,6 +156,69 @@ function MyDiary() {
           return;
         }
         try {
+          // Default-password change flow (main admin validation + old default + new default + confirm)
+          if (adminPassFlow.isDefault) {
+            if (adminPassFlow.step === "main") {
+              setAdminPassFlow({ step: "oldDefault", isDefault: true, data: { main: pwd } });
+              setAdminPassword("");
+              addSystemMessage("Enter current default password:");
+              return;
+            }
+            if (adminPassFlow.step === "oldDefault") {
+              setAdminPassFlow({ step: "newDefault", isDefault: true, data: { ...adminPassFlow.data, oldDefault: pwd } });
+              setAdminPassword("");
+              addSystemMessage("Enter new default password:");
+              return;
+            }
+            if (adminPassFlow.step === "newDefault") {
+              setAdminPassFlow({ step: "confirmNewDefault", isDefault: true, data: { ...adminPassFlow.data, newDefault: pwd } });
+              setAdminPassword("");
+              addSystemMessage("Confirm new default password:");
+              return;
+            }
+            if (adminPassFlow.step === "confirmNewDefault") {
+              const mainPwd = adminPassFlow.data?.main;
+              const oldDefault = adminPassFlow.data?.oldDefault;
+              const newDefault = adminPassFlow.data?.newDefault;
+              const confirmPwd = pwd;
+              setAdminPassword("");
+              setAdminLoginMode(false);
+              setAdminPassFlow(null);
+              if (!mainPwd || !oldDefault || !newDefault) {
+                addSystemMessage("Password change failed: missing data. Try again.");
+                return;
+              }
+              if (newDefault !== confirmPwd) {
+                addSystemMessage("New default password and confirmation do not match. Aborting.");
+                return;
+              }
+              try {
+                const rawName = originalUsernameRef.current || user?.username || null;
+                let usernameForChange = rawName;
+                if (typeof usernameForChange === "string" && usernameForChange.endsWith("-admin")) {
+                  usernameForChange = usernameForChange.slice(0, -"-admin".length);
+                }
+                const payload = {
+                  username: usernameForChange,
+                  adminPassword: mainPwd,
+                  oldDefaultPassword: oldDefault,
+                  newDefaultPassword: newDefault,
+                };
+                const res = await api.changeDefaultPassword(payload);
+                if (res && res.success) {
+                  addSystemMessage("Default admin password changed successfully.");
+                } else {
+                  addSystemMessage((res && (res.error || res.message)) || "Failed to change default password.");
+                }
+              } catch (err) {
+                addSystemMessage((err && err.message) || "Failed to change default password.");
+              }
+              return;
+            }
+            // fall through if none matched
+          }
+
+          // Regular admin password-change flow (per-admin password change)
           if (adminPassFlow.step === "old") {
             setAdminPassFlow({ step: "new", data: { ...adminPassFlow.data, old: pwd } });
             setAdminPassword("");
@@ -183,40 +246,25 @@ function MyDiary() {
               addSystemMessage("New password and confirmation do not match. Aborting.");
               return;
             }
-            // If this is the default-password-change flow, call the appropriate API
             try {
               const rawName = originalUsernameRef.current || user?.username || null;
               let usernameForChange = rawName;
               if (typeof usernameForChange === "string" && usernameForChange.endsWith("-admin")) {
                 usernameForChange = usernameForChange.slice(0, -"-admin".length);
               }
-              if (adminPassFlow.isDefault) {
-                const payload = {
-                  username: usernameForChange,
-                  adminPassword: oldPwd,
-                  newDefaultPassword: newPwd,
-                };
-                const res = await api.changeDefaultPassword(payload);
-                if (res && res.success) {
-                  addSystemMessage("Default admin password changed successfully.");
-                } else {
-                  addSystemMessage((res && (res.error || res.message)) || "Failed to change default password.");
-                }
+              const payload = {
+                username: usernameForChange,
+                oldPassword: oldPwd,
+                newPassword: newPwd,
+              };
+              const res = await api.changeAdminPassword(payload);
+              if (res && res.success) {
+                addSystemMessage("Admin password changed successfully.");
               } else {
-                const payload = {
-                  username: usernameForChange,
-                  oldPassword: oldPwd,
-                  newPassword: newPwd,
-                };
-                const res = await api.changeAdminPassword(payload);
-                if (res && res.success) {
-                  addSystemMessage("Admin password changed successfully.");
-                } else {
-                  addSystemMessage((res && (res.error || res.message)) || "Failed to change admin password.");
-                }
+                addSystemMessage((res && (res.error || res.message)) || "Failed to change admin password.");
               }
             } catch (err) {
-              addSystemMessage((err && err.message) || "Failed to change password.");
+              addSystemMessage((err && err.message) || "Failed to change admin password.");
             }
             return;
           }
@@ -510,7 +558,7 @@ function MyDiary() {
         addSystemMessage("Permission denied. 'passdef change' is admin-only.");
         return;
       }
-      setAdminPassFlow({ step: "old", isDefault: true, data: {} });
+      setAdminPassFlow({ step: "main", isDefault: true, data: {} });
       setAdminLoginMode(true);
       setAdminPassword("");
       addSystemMessage("Default password change initiated. Enter main admin password (or type 'cancel' to abort):");
