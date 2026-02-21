@@ -79,8 +79,8 @@ router.post("/register", rateLimit(10, 60 * 1000), sanitize(), async (req, res) 
       });
     }
 
-    // Format validation (only lowercase letters, numbers, underscore, period)
-    const formatRegex = /^[a-z0-9_.]+$/;
+    // Format validation (only lowercase letters, numbers, underscore, period, hyphen)
+    const formatRegex = /^[a-z0-9_.-]+$/;
     if (!formatRegex.test(normalizedUsername)) {
       return res.status(400).json({
         success: false,
@@ -128,7 +128,7 @@ router.post("/register", rateLimit(10, 60 * 1000), sanitize(), async (req, res) 
     if (normalizedUsername.toLowerCase().includes("ceo")) {
       return res.status(400).json({
         success: false,
-        error: "This username contains a restricted keyword.",
+        error: "This username is already taken.",
       });
     }
 
@@ -528,13 +528,13 @@ router.post("/verify-username", rateLimit(60, 60 * 1000), sanitize(), async (req
     }
 
     // If username contains 'ceo' (case-insensitive), treat as reserved/unavailable
-    if (/ceo/i.test(username)) {
-      return res.json({
-        success: true,
-        exists: true,
-        message: "Username not available",
-      });
-    }
+      if (/ceo/i.test(username)) {
+        return res.json({
+          success: true,
+          exists: true,
+          message: "This username is already taken",
+        });
+      }
 
     // Check if user exists in Firestore
     const usersSnap = await db
@@ -590,7 +590,7 @@ router.get("/check-username", rateLimit(60, 60 * 1000), sanitize(), async (req, 
     }
 
     // 4. Format validation (only lowercase letters, numbers, underscore, period)
-    const formatRegex = /^[a-z0-9_.]+$/;
+    const formatRegex = /^[a-z0-9_.-]+$/;
     if (!formatRegex.test(trimmedUsername)) {
       return res.json({
         available: false,
@@ -637,7 +637,7 @@ router.get("/check-username", rateLimit(60, 60 * 1000), sanitize(), async (req, 
       console.log(`🚫 Restricted keyword detected: ${trimmedUsername}`);
       return res.json({
         available: false,
-        error: "This username contains a restricted keyword.",
+        error: "This username is already taken.",
       });
     }
 
@@ -680,7 +680,8 @@ router.get("/suggest-username", rateLimit(30, 60 * 1000), sanitize(), async (req
       const length = Math.floor(Math.random() * 5) + 4; // 4-8 chars
       let s = "";
       for (let i = 0; i < length; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
-      return `mid-${s}`;
+      // use underscore separator to conform to allowed characters
+      return `mid_${s}`;
     };
 
     const suggestions = new Set();
