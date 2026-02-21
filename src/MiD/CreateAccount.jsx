@@ -23,41 +23,30 @@ import {
   generateUsernameSuggestion,
 } from "../utils/usernameValidation";
 
-// ============================================
-// Constants
-// ============================================
-const DEBOUNCE_DELAY = 300;
-
-// Check if suggestion is available (recursive) - uses API
-const findAvailableSuggestion = async (suggestion, maxAttempts = 10) => {
-  if (maxAttempts <= 0) return null;
-
-  try {
-    const result = await api.checkUsername(suggestion);
-    if (result.available) {
-      return suggestion;
+    setSuggestions([]);
+    try {
+      const resp = await api.suggestUsernames(3);
+      if (resp && resp.suggestions) {
+        setSuggestions(resp.suggestions.slice(0, 3));
+      } else {
+        // fallback to client-side generation
+        const newSuggestions = [];
+        for (let i = 0; i < 3; i++) {
+          const s = await findAvailableSuggestion(generateUsernameSuggestion(), 5);
+          if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
+        }
+        setSuggestions(newSuggestions.slice(0, 3));
+      }
+    } catch (err) {
+      console.error('Suggestion generation failed', err);
+      const newSuggestions = [];
+      for (let i = 0; i < 3; i++) {
+        const s = await findAvailableSuggestion(generateUsernameSuggestion(), 5);
+        if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
+      }
+      setSuggestions(newSuggestions.slice(0, 3));
     }
-    return await findAvailableSuggestion(
-      generateUsernameSuggestion(),
-      maxAttempts - 1,
-    );
-  } catch (error) {
-    console.error("Error checking suggestion:", error);
-    return await findAvailableSuggestion(
-      generateUsernameSuggestion(),
-      maxAttempts - 1,
-    );
-  }
-};
-
-function CreateAccount() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [answer1, setAnswer1] = useState("");
-  const [answer2, setAnswer2] = useState("");
-  const [answer3, setAnswer3] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+    setLoadingSuggestions(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -153,25 +142,57 @@ function CreateAccount() {
   const generateSuggestions = async () => {
     setLoadingSuggestions(true);
     setSuggestions([]);
-
-    const newSuggestions = [];
-    const checks = [];
-
-    // Generate 3 suggestions and check availability in parallel
-    for (let i = 0; i < 3; i++) {
-      checks.push(
-        findAvailableSuggestion(generateUsernameSuggestion(), 5).then(
-          (suggestion) => {
-            if (suggestion && !newSuggestions.includes(suggestion)) {
-              newSuggestions.push(suggestion);
-            }
-          },
-        ),
-      );
+    try {
+      const resp = await api.suggestUsernames(3);
+      if (resp && resp.suggestions) {
+        const list = resp.suggestions.slice(0, 3);
+        setSuggestions(list);
+        if (list.length > 0) {
+          // auto-fill the first suggestion into the username field and validate
+          const first = list[0];
+          setUsername(first);
+          setUsernameState("checking");
+          if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
+          usernameCheckRef.current = setTimeout(() => {
+            validateUsernameWithBackend(first);
+          }, DEBOUNCE_DELAY);
+        }
+      } else {
+        // fallback to client-side generation
+        const newSuggestions = [];
+        for (let i = 0; i < 3; i++) {
+          const s = await findAvailableSuggestion(generateUsernameSuggestion(), 5);
+          if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
+        }
+        setSuggestions(newSuggestions.slice(0, 3));
+        if (newSuggestions.length > 0) {
+          const first = newSuggestions[0];
+          setUsername(first);
+          setUsernameState("checking");
+          if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
+          usernameCheckRef.current = setTimeout(() => {
+            validateUsernameWithBackend(first);
+          }, DEBOUNCE_DELAY);
+        }
+      }
+    } catch (err) {
+      console.error('Suggestion generation failed', err);
+      const newSuggestions = [];
+      for (let i = 0; i < 3; i++) {
+        const s = await findAvailableSuggestion(generateUsernameSuggestion(), 5);
+        if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
+      }
+      setSuggestions(newSuggestions.slice(0, 3));
+      if (newSuggestions.length > 0) {
+        const first = newSuggestions[0];
+        setUsername(first);
+        setUsernameState("checking");
+        if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
+        usernameCheckRef.current = setTimeout(() => {
+          validateUsernameWithBackend(first);
+        }, DEBOUNCE_DELAY);
+      }
     }
-
-    await Promise.all(checks);
-    setSuggestions(newSuggestions.slice(0, 3));
     setLoadingSuggestions(false);
   };
 
@@ -179,16 +200,13 @@ function CreateAccount() {
   const handleSuggestionClick = (suggestion) => {
     setUsername(suggestion);
     setUsernameState("checking");
+    if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
+    usernameCheckRef.current = setTimeout(() => validateUsernameWithBackend(suggestion), DEBOUNCE_DELAY);
+  };
 
-    // Clear any previous timer
-    if (usernameCheckRef.current) {
-      clearTimeout(usernameCheckRef.current);
-    }
-
-    // Validate the suggestion
-    usernameCheckRef.current = setTimeout(() => {
-      validateUsernameWithBackend(suggestion);
-    }, DEBOUNCE_DELAY);
+  const removeSuggestion = (index, e) => {
+    if (e) e.stopPropagation();
+    setSuggestions((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Clear field error
@@ -286,7 +304,16 @@ function CreateAccount() {
         }, 2000);
       } else {
         const msg = result.error || "Registration failed";
-        if (msg.toLowerCase().includes("username")) {
+        const status = result.status || 0;
+        // If the server indicates a client error (400) and mentions username/taken, show inline
+        if (
+          status === 400 && /username|taken/i.test(msg)
+        ) {
+          setErrors((prev) => ({ ...prev, username: msg }));
+          setUsernameState("invalid");
+          setUsernameError(msg);
+        } else if (/username|taken/i.test(msg)) {
+          // fallback: message contains username-related text
           setErrors((prev) => ({ ...prev, username: msg }));
           setUsernameState("invalid");
           setUsernameError(msg);
@@ -417,18 +444,18 @@ function CreateAccount() {
 
                     {/* Error Message */}
                     {usernameError && (
-                      <div className="form-error">
-                        <AlertCircle size={16} />
-                        {usernameError}
-                      </div>
+                                      <div className="form-error">
+                                        <X size={16} className="input-check-error" />
+                                        {usernameError}
+                                      </div>
                     )}
 
                     {/* Success Message */}
                     {usernameState === "valid" && !usernameError && (
-                      <div className="form-hint success">
-                        <CheckCircle size={14} />
-                        Username is available.
-                      </div>
+                                      <div className="form-hint success">
+                                        <CheckCircle size={14} className="input-check-success" />
+                                        Username is available.
+                                      </div>
                     )}
 
                     {/* Suggestions Section */}
@@ -456,18 +483,23 @@ function CreateAccount() {
                         </button>
 
                         {suggestions.length > 0 && (
-                          <div className="suggestions-list">
+                          <div className="suggestions-list cards">
                             {suggestions.map((suggestion, index) => (
-                              <button
+                              <div
                                 key={index}
-                                type="button"
-                                className="suggestion-btn"
-                                onClick={() =>
-                                  handleSuggestionClick(suggestion)
-                                }
+                                className="suggestion-card"
+                                onClick={() => handleSuggestionClick(suggestion)}
                               >
-                                {suggestion}
-                              </button>
+                                <div className="suggestion-text">{suggestion}</div>
+                                <button
+                                  type="button"
+                                  className="suggestion-close"
+                                  onClick={(e) => removeSuggestion(index, e)}
+                                  aria-label={`Remove suggestion ${suggestion}`}
+                                >
+                                  ×
+                                </button>
+                              </div>
                             ))}
                           </div>
                         )}

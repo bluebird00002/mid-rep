@@ -336,6 +336,61 @@
   border: 1px solid rgba(74, 222, 128, 0.12);
 }
 
+/* Suggestions cards */
+.suggestions-section {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.generate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 166, 0, 0.08);
+  border: 1px solid rgba(255, 166, 0, 0.18);
+  color: #ffa600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.suggestions-list.cards {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.suggestion-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 166, 0, 0.12);
+  color: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  min-width: 120px;
+}
+.suggestion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+}
+.suggestion-text {
+  font-weight: 600;
+  color: #ffd8a6;
+}
+.suggestion-close {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.suggestion-close:hover { color: #ff8b8b; }
+
 /* ============ FORM ACTIONS ============ */
 .form-actions {
   display: flex;

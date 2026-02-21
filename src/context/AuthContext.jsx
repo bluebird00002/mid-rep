@@ -164,9 +164,14 @@ export const AuthProvider = ({ children }) => {
       return {
         success: false,
         error: response.error || response.message || "Registration failed",
+        status: response.status || null,
       };
     } catch (error) {
-      return { success: false, error: error.message || "Registration failed" };
+      return {
+        success: false,
+        error: error.message || "Registration failed",
+        status: error.status || null,
+      };
     }
   };
 

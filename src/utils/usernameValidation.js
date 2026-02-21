@@ -31,7 +31,7 @@ export const validateUsernameFormat = (username) => {
   }
 
   // Format validation (only lowercase letters, numbers, underscore, period)
-  const formatRegex = /^[a-z0-9_.]+$/;
+  const formatRegex = /^[a-z0-9_.-]+$/;
   if (!formatRegex.test(trimmed)) {
     return {
       valid: false,
@@ -77,7 +77,7 @@ export const validateUsernameFormat = (username) => {
   if (trimmed.toLowerCase().includes(RESTRICTED_KEYWORD)) {
     return {
       valid: false,
-      error: "This username contains a restricted keyword.",
+      error: "This username is already taken.",
     };
   }
 
@@ -95,7 +95,8 @@ export const generateUsernameSuggestion = () => {
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return `mid-${result}`;
+  // use underscore separator (allowed character) instead of hyphen
+  return `mid_${result}`;
 };
 
 // ============================================

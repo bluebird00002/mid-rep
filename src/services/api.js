@@ -222,6 +222,10 @@ class MiDApi {
     const params = new URLSearchParams({ username }).toString();
     return this.request(`/auth/check-username?${params}`);
   }
+  async suggestUsernames(count = 3) {
+    const params = new URLSearchParams({ count }).toString();
+    return this.request(`/auth/suggest-username?${params}`);
+  }
   async verifySecurityAnswers(username, a1, a2, a3) {
     return this.request("/auth/verify-security-answers", {
       method: "POST",
