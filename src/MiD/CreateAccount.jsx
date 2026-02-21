@@ -23,30 +23,37 @@ import {
   generateUsernameSuggestion,
 } from "../utils/usernameValidation";
 
-    setSuggestions([]);
-    try {
-      const resp = await api.suggestUsernames(3);
-      if (resp && resp.suggestions) {
-        setSuggestions(resp.suggestions.slice(0, 3));
-      } else {
-        // fallback to client-side generation
-        const newSuggestions = [];
-        for (let i = 0; i < 3; i++) {
-          const s = await findAvailableSuggestion(generateUsernameSuggestion(), 5);
-          if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
-        }
-        setSuggestions(newSuggestions.slice(0, 3));
-      }
-    } catch (err) {
-      console.error('Suggestion generation failed', err);
-      const newSuggestions = [];
-      for (let i = 0; i < 3; i++) {
-        const s = await findAvailableSuggestion(generateUsernameSuggestion(), 5);
-        if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
-      }
-      setSuggestions(newSuggestions.slice(0, 3));
+const DEBOUNCE_DELAY = 300;
+
+// Check if suggestion is available (recursive) - uses API
+const findAvailableSuggestion = async (suggestion, maxAttempts = 10) => {
+  if (maxAttempts <= 0) return null;
+
+  try {
+    const result = await api.checkUsername(suggestion);
+    if (result.available) {
+      return suggestion;
     }
-    setLoadingSuggestions(false);
+    return await findAvailableSuggestion(
+      generateUsernameSuggestion(),
+      maxAttempts - 1,
+    );
+  } catch (error) {
+    console.error("Error checking suggestion:", error);
+    return await findAvailableSuggestion(
+      generateUsernameSuggestion(),
+      maxAttempts - 1,
+    );
+  }
+};
+
+function CreateAccount() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [answer1, setAnswer1] = useState("");
+  const [answer2, setAnswer2] = useState("");
+  const [answer3, setAnswer3] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -145,18 +152,7 @@ import {
     try {
       const resp = await api.suggestUsernames(3);
       if (resp && resp.suggestions) {
-        const list = resp.suggestions.slice(0, 3);
-        setSuggestions(list);
-        if (list.length > 0) {
-          // auto-fill the first suggestion into the username field and validate
-          const first = list[0];
-          setUsername(first);
-          setUsernameState("checking");
-          if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
-          usernameCheckRef.current = setTimeout(() => {
-            validateUsernameWithBackend(first);
-          }, DEBOUNCE_DELAY);
-        }
+        setSuggestions(resp.suggestions.slice(0, 3));
       } else {
         // fallback to client-side generation
         const newSuggestions = [];
@@ -165,15 +161,6 @@ import {
           if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
         }
         setSuggestions(newSuggestions.slice(0, 3));
-        if (newSuggestions.length > 0) {
-          const first = newSuggestions[0];
-          setUsername(first);
-          setUsernameState("checking");
-          if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
-          usernameCheckRef.current = setTimeout(() => {
-            validateUsernameWithBackend(first);
-          }, DEBOUNCE_DELAY);
-        }
       }
     } catch (err) {
       console.error('Suggestion generation failed', err);
@@ -183,15 +170,6 @@ import {
         if (s && !newSuggestions.includes(s)) newSuggestions.push(s);
       }
       setSuggestions(newSuggestions.slice(0, 3));
-      if (newSuggestions.length > 0) {
-        const first = newSuggestions[0];
-        setUsername(first);
-        setUsernameState("checking");
-        if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
-        usernameCheckRef.current = setTimeout(() => {
-          validateUsernameWithBackend(first);
-        }, DEBOUNCE_DELAY);
-      }
     }
     setLoadingSuggestions(false);
   };
