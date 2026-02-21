@@ -536,13 +536,10 @@ router.post("/verify-username", rateLimit(60, 60 * 1000), sanitize(), async (req
         });
       }
 
-    // Check if user exists in Firestore
-    const usersSnap = await db
-      .collection("users")
-      .where("username", "==", username)
-      .limit(1)
-      .get();
-    const exists = !usersSnap.empty;
+    // Check canonical usernames collection for existence (case-insensitive)
+    const lower = username.toLowerCase().trim();
+    const nameDoc = await db.collection("usernames").doc(lower).get();
+    const exists = nameDoc.exists;
 
     res.json({
       success: true,
@@ -642,15 +639,10 @@ router.get("/check-username", rateLimit(60, 60 * 1000), sanitize(), async (req, 
     }
 
     // 10. Database uniqueness check (case-insensitive)
-    // Convert to lowercase for case-insensitive comparison
     const lowerUsername = trimmedUsername.toLowerCase();
-    const usersSnap = await db
-      .collection("users")
-      .where("username", "==", lowerUsername)
-      .limit(1)
-      .get();
+    const nameDoc = await db.collection("usernames").doc(lowerUsername).get();
 
-    if (!usersSnap.empty) {
+    if (nameDoc.exists) {
       console.log(`❌ Username taken: ${trimmedUsername}`);
       return res.json({
         available: false,
