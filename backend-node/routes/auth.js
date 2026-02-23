@@ -17,7 +17,11 @@ const rateLimits = new Map();
 function rateLimit(maxRequests = 60, windowMs = 60 * 1000) {
   return (req, res, next) => {
     try {
-      const key = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+      const key =
+        req.ip ||
+        req.headers["x-forwarded-for"] ||
+        req.connection.remoteAddress ||
+        "unknown";
       const now = Date.now();
       const entry = rateLimits.get(key) || { count: 0, start: now };
       if (now - entry.start > windowMs) {
@@ -28,7 +32,10 @@ function rateLimit(maxRequests = 60, windowMs = 60 * 1000) {
       }
       rateLimits.set(key, entry);
       if (entry.count > maxRequests) {
-        return res.status(429).json({ success: false, error: 'Too many requests. Please try again later.' });
+        return res.status(429).json({
+          success: false,
+          error: "Too many requests. Please try again later.",
+        });
       }
       next();
     } catch (err) {
@@ -38,202 +45,210 @@ function rateLimit(maxRequests = 60, windowMs = 60 * 1000) {
 }
 
 // Register new user
-router.post("/register", rateLimit(10, 60 * 1000), sanitize(), async (req, res) => {
-  try {
-    const { username, password, securityAnswers, profile_image_url } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({
-        success: false,
-        error: "Username and password are required",
-      });
-    }
-
-    if (
-      !securityAnswers ||
-      !securityAnswers.answer1 ||
-      !securityAnswers.answer2 ||
-      !securityAnswers.answer3
-    ) {
-      return res.status(400).json({
-        success: false,
-        error: "All security answers are required",
-      });
-    }
-
-    // Normalize username (trim + lowercase)
-    const normalizedUsername = username.trim().toLowerCase();
-
-    // Comprehensive username validation (same as check-username endpoint)
-    // Length validation (5-24 characters)
-    if (normalizedUsername.length < 5) {
-      return res.status(400).json({
-        success: false,
-        error: "Username must be at least 5 characters.",
-      });
-    }
-    if (normalizedUsername.length > 24) {
-      return res.status(400).json({
-        success: false,
-        error: "Username must be at most 24 characters.",
-      });
-    }
-
-    // Format validation (only lowercase letters, numbers, underscore, period, hyphen)
-    const formatRegex = /^[a-z0-9_.-]+$/;
-    if (!formatRegex.test(normalizedUsername)) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "Username can only contain lowercase letters, numbers, periods, and underscores.",
-      });
-    }
-
-    // No spaces allowed
-    if (username.includes(" ")) {
-      return res.status(400).json({
-        success: false,
-        error: "Username cannot contain spaces.",
-      });
-    }
-
-    // Cannot start or end with period
-    if (
-      normalizedUsername.startsWith(".") ||
-      normalizedUsername.endsWith(".")
-    ) {
-      return res.status(400).json({
-        success: false,
-        error: "Username cannot start or end with a period.",
-      });
-    }
-
-    // No consecutive periods
-    if (normalizedUsername.includes("..")) {
-      return res.status(400).json({
-        success: false,
-        error: "Username cannot contain consecutive periods.",
-      });
-    }
-
-    // Must contain at least one letter
-    if (!/[a-z]/.test(normalizedUsername)) {
-      return res.status(400).json({
-        success: false,
-        error: "Username must contain at least one letter.",
-      });
-    }
-
-    // RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
-    if (normalizedUsername.toLowerCase().includes("ceo")) {
-      return res.status(400).json({
-        success: false,
-        error: "This username is already taken.",
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        error: "Password must be at least 6 characters",
-      });
-    }
-
-    // Hash password and security answers (case-insensitive, trimmed)
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedAnswer1 = await bcrypt.hash(
-      securityAnswers.answer1.toLowerCase().trim(),
-      10,
-    );
-    const hashedAnswer2 = await bcrypt.hash(
-      securityAnswers.answer2.toLowerCase().trim(),
-      10,
-    );
-    const hashedAnswer3 = await bcrypt.hash(
-      securityAnswers.answer3.toLowerCase().trim(),
-      10,
-    );
-
-    // Use a Firestore transaction to create a unique username mapping
-    const lowerUsername = normalizedUsername;
-    const usernamesRef = db.collection("usernames").doc(lowerUsername);
-    const usersRef = db.collection("users").doc();
-    const secRef = db.collection("security_answers").doc();
-
+router.post(
+  "/register",
+  rateLimit(10, 60 * 1000),
+  sanitize(),
+  async (req, res) => {
     try {
-      await db.runTransaction(async (t) => {
-        const nameSnap = await t.get(usernamesRef);
-        if (nameSnap.exists) {
-          throw new Error("USERNAME_TAKEN");
-        }
+      const { username, password, securityAnswers, profile_image_url } =
+        req.body;
 
-        // create username mapping + user + security answers atomically
-        t.set(usernamesRef, {
-          user_id: usersRef.id,
-          created_at: admin.firestore.FieldValue.serverTimestamp(),
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          error: "Username and password are required",
         });
-
-        t.set(usersRef, {
-          username: lowerUsername,
-          password_hash: hashedPassword,
-          profile_image_url: profile_image_url || null,
-          created_at: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        t.set(secRef, {
-          user_id: usersRef.id,
-          question_1: "What is your favorite color?",
-          answer_1_hash: hashedAnswer1,
-          question_2: "What is the name of your first pet?",
-          answer_2_hash: hashedAnswer2,
-          question_3: "In what city were you born?",
-          answer_3_hash: hashedAnswer3,
-          created_at: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      });
-    } catch (txErr) {
-      if (txErr.message === "USERNAME_TAKEN") {
-        return res.status(400).json({ success: false, error: "This username is already taken." });
       }
-      console.error("Transaction error:", txErr);
-      return res.status(500).json({ success: false, error: "Failed to create account" });
-    }
 
-    const userId = usersRef.id;
-    console.log(`✅ User created (transaction): ${lowerUsername} (id=${userId})`);
+      if (
+        !securityAnswers ||
+        !securityAnswers.answer1 ||
+        !securityAnswers.answer2 ||
+        !securityAnswers.answer3
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "All security answers are required",
+        });
+      }
 
-    // Generate JWT token
-    const jwtSecret =
-      process.env.JWT_SECRET ||
-      "mid-development-secret-key-change-in-production-2024";
-    const token = jwt.sign(
-      { userId, username: lowerUsername },
-      jwtSecret,
-      {
+      // Normalize username (trim + lowercase)
+      const normalizedUsername = username.trim().toLowerCase();
+
+      // Comprehensive username validation (same as check-username endpoint)
+      // Length validation (5-24 characters)
+      if (normalizedUsername.length < 5) {
+        return res.status(400).json({
+          success: false,
+          error: "Username must be at least 5 characters.",
+        });
+      }
+      if (normalizedUsername.length > 24) {
+        return res.status(400).json({
+          success: false,
+          error: "Username must be at most 24 characters.",
+        });
+      }
+
+      // Format validation (only lowercase letters, numbers, underscore, period, hyphen)
+      const formatRegex = /^[a-z0-9_.-]+$/;
+      if (!formatRegex.test(normalizedUsername)) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Username can only contain lowercase letters, numbers, periods, and underscores.",
+        });
+      }
+
+      // No spaces allowed
+      if (username.includes(" ")) {
+        return res.status(400).json({
+          success: false,
+          error: "Username cannot contain spaces.",
+        });
+      }
+
+      // Cannot start or end with period
+      if (
+        normalizedUsername.startsWith(".") ||
+        normalizedUsername.endsWith(".")
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "Username cannot start or end with a period.",
+        });
+      }
+
+      // No consecutive periods
+      if (normalizedUsername.includes("..")) {
+        return res.status(400).json({
+          success: false,
+          error: "Username cannot contain consecutive periods.",
+        });
+      }
+
+      // Must contain at least one letter
+      if (!/[a-z]/.test(normalizedUsername)) {
+        return res.status(400).json({
+          success: false,
+          error: "Username must contain at least one letter.",
+        });
+      }
+
+      // RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
+      if (normalizedUsername.toLowerCase().includes("ceo")) {
+        return res.status(400).json({
+          success: false,
+          error: "This username is already taken.",
+        });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: "Password must be at least 6 characters",
+        });
+      }
+
+      // Hash password and security answers (case-insensitive, trimmed)
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedAnswer1 = await bcrypt.hash(
+        securityAnswers.answer1.toLowerCase().trim(),
+        10,
+      );
+      const hashedAnswer2 = await bcrypt.hash(
+        securityAnswers.answer2.toLowerCase().trim(),
+        10,
+      );
+      const hashedAnswer3 = await bcrypt.hash(
+        securityAnswers.answer3.toLowerCase().trim(),
+        10,
+      );
+
+      // Use a Firestore transaction to create a unique username mapping
+      const lowerUsername = normalizedUsername;
+      const usernamesRef = db.collection("usernames").doc(lowerUsername);
+      const usersRef = db.collection("users").doc();
+      const secRef = db.collection("security_answers").doc();
+
+      try {
+        await db.runTransaction(async (t) => {
+          const nameSnap = await t.get(usernamesRef);
+          if (nameSnap.exists) {
+            throw new Error("USERNAME_TAKEN");
+          }
+
+          // create username mapping + user + security answers atomically
+          t.set(usernamesRef, {
+            user_id: usersRef.id,
+            created_at: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          t.set(usersRef, {
+            username: lowerUsername,
+            password_hash: hashedPassword,
+            profile_image_url: profile_image_url || null,
+            created_at: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          t.set(secRef, {
+            user_id: usersRef.id,
+            question_1: "What is your favorite color?",
+            answer_1_hash: hashedAnswer1,
+            question_2: "What is the name of your first pet?",
+            answer_2_hash: hashedAnswer2,
+            question_3: "In what city were you born?",
+            answer_3_hash: hashedAnswer3,
+            created_at: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+      } catch (txErr) {
+        if (txErr.message === "USERNAME_TAKEN") {
+          return res
+            .status(400)
+            .json({ success: false, error: "This username is already taken." });
+        }
+        console.error("Transaction error:", txErr);
+        return res
+          .status(500)
+          .json({ success: false, error: "Failed to create account" });
+      }
+
+      const userId = usersRef.id;
+      console.log(
+        `✅ User created (transaction): ${lowerUsername} (id=${userId})`,
+      );
+
+      // Generate JWT token
+      const jwtSecret =
+        process.env.JWT_SECRET ||
+        "mid-development-secret-key-change-in-production-2024";
+      const token = jwt.sign({ userId, username: lowerUsername }, jwtSecret, {
         expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-      },
-    );
+      });
 
-    res.status(201).json({
-      success: true,
-      data: {
-        token,
-        user: {
-          id: userId,
-          username: lowerUsername,
-          profile_image_url: profile_image_url || null,
+      res.status(201).json({
+        success: true,
+        data: {
+          token,
+          user: {
+            id: userId,
+            username: lowerUsername,
+            profile_image_url: profile_image_url || null,
+          },
         },
-      },
-      message: "Account created successfully",
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to create account",
-    });
-  }
-});
+        message: "Account created successfully",
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to create account",
+      });
+    }
+  },
+);
 
 // Login
 router.post("/login", async (req, res) => {
@@ -514,219 +529,283 @@ router.get("/is-new-user", async (req, res) => {
 });
 
 // Verify username existence / availability (used by frontend live-check)
-router.post("/verify-username", rateLimit(60, 60 * 1000), sanitize(), async (req, res) => {
-  try {
-    const { username } = req.body;
+router.post(
+  "/verify-username",
+  rateLimit(60, 60 * 1000),
+  sanitize(),
+  async (req, res) => {
+    try {
+      const { username } = req.body;
 
-    console.log(`Username verification attempt: ${username}`);
+      console.log(`Username verification attempt: ${username}`);
 
-    // Validate input
-    if (!username || username.length < 3) {
-      return res
-        .status(400)
-        .json({ success: false, error: "Valid username is required" });
-    }
+      // Validate input
+      if (!username || username.length < 3) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Valid username is required" });
+      }
 
-    // If username contains 'ceo' (case-insensitive), treat as reserved/unavailable
-    if (/ceo/i.test(username)) {
-      return res.json({
+      // If username contains 'ceo' (case-insensitive), treat as reserved/unavailable
+      if (/ceo/i.test(username)) {
+        return res.json({
+          success: true,
+          exists: true,
+          message: "This username is already taken",
+        });
+      }
+
+      // Check canonical usernames collection for existence (case-insensitive)
+      const lower = username.toLowerCase().trim();
+      const nameDoc = await db.collection("usernames").doc(lower).get();
+      let exists = nameDoc.exists;
+
+      // Also check users collection (some legacy records may not have usernames mapping)
+      try {
+        const usersSnap = await db
+          .collection("users")
+          .where("username", "==", lower)
+          .limit(1)
+          .get();
+        console.log("DEBUG: verify-username users query size:", usersSnap.size);
+        if (!usersSnap.empty) {
+          exists = true;
+          console.log("DEBUG: verify-username found user:", {
+            id: usersSnap.docs[0].id,
+            ...usersSnap.docs[0].data(),
+          });
+        }
+      } catch (uqErr) {
+        console.warn(
+          "DEBUG: verify-username users query error:",
+          uqErr && uqErr.message,
+        );
+      }
+
+      // For password reset, we need to verify the username EXISTS in our database
+      // If username doesn't exist, return success: false to indicate invalid username
+      if (!exists) {
+        return res.status(404).json({
+          success: false,
+          error: "Username not found. Please check and try again.",
+        });
+      }
+
+      res.json({
         success: true,
         exists: true,
-        message: "This username is already taken",
+        message: "Username verified",
       });
+    } catch (error) {
+      console.error("Username verification error:", error);
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to verify username" });
     }
-
-    // Check canonical usernames collection for existence (case-insensitive)
-    const lower = username.toLowerCase().trim();
-    const nameDoc = await db.collection("usernames").doc(lower).get();
-    let exists = nameDoc.exists;
-
-    // Also check users collection (some legacy records may not have usernames mapping)
-    try {
-      const usersSnap = await db.collection("users").where("username", "==", lower).limit(1).get();
-      console.log("DEBUG: verify-username users query size:", usersSnap.size);
-      if (!usersSnap.empty) {
-        exists = true;
-        console.log("DEBUG: verify-username found user:", { id: usersSnap.docs[0].id, ...usersSnap.docs[0].data() });
-      }
-    } catch (uqErr) {
-      console.warn("DEBUG: verify-username users query error:", uqErr && uqErr.message);
-    }
-
-    res.json({
-      success: true,
-      exists,
-      message: exists ? "Username already exists" : "Username available",
-    });
-  } catch (error) {
-    console.error("Username verification error:", error);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to verify username" });
-  }
-});
+  },
+);
 
 // ============================================
 // NEW: Real-time username check endpoint (GET)
 // Comprehensive validation with format, restricted keywords, and uniqueness
 // ============================================
-router.get("/check-username", rateLimit(60, 60 * 1000), sanitize(), async (req, res) => {
-  try {
-    const { username } = req.query;
-
-    console.log(`🔍 Username check: ${username}`);
-
-    // 1. Basic input validation
-    if (!username || typeof username !== "string") {
-      return res.json({ available: false, error: "Username is required" });
-    }
-
-    // 2. Trim whitespace
-    const trimmedUsername = username.trim();
-
-    // 3. Length validation (5-24 characters)
-    if (trimmedUsername.length < 5) {
-      return res.json({
-        available: false,
-        error: "Username must be at least 5 characters.",
-      });
-    }
-    if (trimmedUsername.length > 24) {
-      return res.json({
-        available: false,
-        error: "Username must be at most 24 characters.",
-      });
-    }
-
-    // 4. Format validation (only lowercase letters, numbers, underscore, period)
-    const formatRegex = /^[a-z0-9_.-]+$/;
-    if (!formatRegex.test(trimmedUsername)) {
-      return res.json({
-        available: false,
-        error:
-          "Username can only contain lowercase letters, numbers, periods, and underscores.",
-      });
-    }
-
-    // 5. No spaces allowed
-    if (username.includes(" ")) {
-      return res.json({
-        available: false,
-        error: "Username cannot contain spaces.",
-      });
-    }
-
-    // 6. Cannot start or end with period
-    if (trimmedUsername.startsWith(".") || trimmedUsername.endsWith(".")) {
-      return res.json({
-        available: false,
-        error: "Username cannot start or end with a period.",
-      });
-    }
-
-    // 7. No consecutive periods
-    if (trimmedUsername.includes("..")) {
-      return res.json({
-        available: false,
-        error: "Username cannot contain consecutive periods.",
-      });
-    }
-
-    // 8. Must contain at least one letter
-    const hasLetter = /[a-z]/.test(trimmedUsername);
-    if (!hasLetter) {
-      return res.json({
-        available: false,
-        error: "Username must contain at least one letter.",
-      });
-    }
-
-    // 9. RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
-    if (trimmedUsername.toLowerCase().includes("ceo")) {
-      console.log(`🚫 Restricted keyword detected: ${trimmedUsername}`);
-      return res.json({
-        available: false,
-        error: "This username is already taken.",
-      });
-    }
-
-    // 10. Database uniqueness check (case-insensitive)
-    const lowerUsername = trimmedUsername.toLowerCase();
-    const nameDoc = await db.collection("usernames").doc(lowerUsername).get();
-
-    // Also check users collection for legacy or unmigrated records
-    let usersSnap;
+router.get(
+  "/check-username",
+  rateLimit(60, 60 * 1000),
+  sanitize(),
+  async (req, res) => {
     try {
-      usersSnap = await db.collection("users").where("username", "==", lowerUsername).limit(1).get();
-    } catch (uqErr) {
-      console.warn("DEBUG: check-username users query error:", uqErr && uqErr.message);
-      usersSnap = null;
-    }
+      const { username } = req.query;
 
-    if (nameDoc.exists || (usersSnap && !usersSnap.empty)) {
-      console.log(`❌ Username taken: ${trimmedUsername}`);
-      try {
-        console.log("DEBUG: usernames doc data:", nameDoc.exists ? nameDoc.data() : null);
-        console.log("DEBUG: users query size:", usersSnap ? usersSnap.size : 0);
-        if (usersSnap && !usersSnap.empty) console.log("DEBUG: user doc:", { id: usersSnap.docs[0].id, ...usersSnap.docs[0].data() });
-      } catch (dbgErr) {
-        console.warn("DEBUG: error while logging related docs:", dbgErr && dbgErr.message);
+      console.log(`🔍 Username check: ${username}`);
+
+      // 1. Basic input validation
+      if (!username || typeof username !== "string") {
+        return res.json({ available: false, error: "Username is required" });
       }
 
-      return res.json({
+      // 2. Trim whitespace
+      const trimmedUsername = username.trim();
+
+      // 3. Length validation (5-24 characters)
+      if (trimmedUsername.length < 5) {
+        return res.json({
+          available: false,
+          error: "Username must be at least 5 characters.",
+        });
+      }
+      if (trimmedUsername.length > 24) {
+        return res.json({
+          available: false,
+          error: "Username must be at most 24 characters.",
+        });
+      }
+
+      // 4. Format validation (only lowercase letters, numbers, underscore, period)
+      const formatRegex = /^[a-z0-9_.-]+$/;
+      if (!formatRegex.test(trimmedUsername)) {
+        return res.json({
+          available: false,
+          error:
+            "Username can only contain lowercase letters, numbers, periods, and underscores.",
+        });
+      }
+
+      // 5. No spaces allowed
+      if (username.includes(" ")) {
+        return res.json({
+          available: false,
+          error: "Username cannot contain spaces.",
+        });
+      }
+
+      // 6. Cannot start or end with period
+      if (trimmedUsername.startsWith(".") || trimmedUsername.endsWith(".")) {
+        return res.json({
+          available: false,
+          error: "Username cannot start or end with a period.",
+        });
+      }
+
+      // 7. No consecutive periods
+      if (trimmedUsername.includes("..")) {
+        return res.json({
+          available: false,
+          error: "Username cannot contain consecutive periods.",
+        });
+      }
+
+      // 8. Must contain at least one letter
+      const hasLetter = /[a-z]/.test(trimmedUsername);
+      if (!hasLetter) {
+        return res.json({
+          available: false,
+          error: "Username must contain at least one letter.",
+        });
+      }
+
+      // 9. RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
+      if (trimmedUsername.toLowerCase().includes("ceo")) {
+        console.log(`🚫 Restricted keyword detected: ${trimmedUsername}`);
+        return res.json({
+          available: false,
+          error: "This username is already taken.",
+        });
+      }
+
+      // 10. Database uniqueness check (case-insensitive)
+      const lowerUsername = trimmedUsername.toLowerCase();
+      const nameDoc = await db.collection("usernames").doc(lowerUsername).get();
+
+      // Also check users collection for legacy or unmigrated records
+      let usersSnap;
+      try {
+        usersSnap = await db
+          .collection("users")
+          .where("username", "==", lowerUsername)
+          .limit(1)
+          .get();
+      } catch (uqErr) {
+        console.warn(
+          "DEBUG: check-username users query error:",
+          uqErr && uqErr.message,
+        );
+        usersSnap = null;
+      }
+
+      if (nameDoc.exists || (usersSnap && !usersSnap.empty)) {
+        console.log(`❌ Username taken: ${trimmedUsername}`);
+        try {
+          console.log(
+            "DEBUG: usernames doc data:",
+            nameDoc.exists ? nameDoc.data() : null,
+          );
+          console.log(
+            "DEBUG: users query size:",
+            usersSnap ? usersSnap.size : 0,
+          );
+          if (usersSnap && !usersSnap.empty)
+            console.log("DEBUG: user doc:", {
+              id: usersSnap.docs[0].id,
+              ...usersSnap.docs[0].data(),
+            });
+        } catch (dbgErr) {
+          console.warn(
+            "DEBUG: error while logging related docs:",
+            dbgErr && dbgErr.message,
+          );
+        }
+
+        return res.json({
+          available: false,
+          error: "This username is already taken.",
+        });
+      }
+
+      console.log(`✅ Username available: ${trimmedUsername}`);
+      res.json({ available: true });
+    } catch (error) {
+      console.error("Username check error:", error);
+      res.status(500).json({
         available: false,
-        error: "This username is already taken.",
+        error: "Unable to verify username. Please try again.",
       });
     }
-
-    console.log(`✅ Username available: ${trimmedUsername}`);
-    res.json({ available: true });
-  } catch (error) {
-    console.error("Username check error:", error);
-    res.status(500).json({
-      available: false,
-      error: "Unable to verify username. Please try again.",
-    });
-  }
-});
+  },
+);
 
 // Suggest username candidates (returns up to 3 unique suggestions)
-router.get("/suggest-username", rateLimit(30, 60 * 1000), sanitize(), async (req, res) => {
-  try {
-    const { count = 3 } = req.query;
-    const max = Math.min(5, Math.max(1, parseInt(count, 10) || 3));
+router.get(
+  "/suggest-username",
+  rateLimit(30, 60 * 1000),
+  sanitize(),
+  async (req, res) => {
+    try {
+      const { count = 3 } = req.query;
+      const max = Math.min(5, Math.max(1, parseInt(count, 10) || 3));
 
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    const generateCandidate = () => {
-      const length = Math.floor(Math.random() * 5) + 4; // 4-8 chars
-      let s = "";
-      for (let i = 0; i < length; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
-      // use underscore separator to conform to allowed characters
-      return `mid_${s}`;
-    };
+      const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+      const generateCandidate = () => {
+        const length = Math.floor(Math.random() * 5) + 4; // 4-8 chars
+        let s = "";
+        for (let i = 0; i < length; i++)
+          s += chars.charAt(Math.floor(Math.random() * chars.length));
+        // use underscore separator to conform to allowed characters
+        return `mid_${s}`;
+      };
 
-    const suggestions = new Set();
-    let attempts = 0;
-    while (suggestions.size < max && attempts < 50) {
-      attempts += 1;
-      const cand = generateCandidate();
-      if (/ceo/i.test(cand)) continue;
+      const suggestions = new Set();
+      let attempts = 0;
+      while (suggestions.size < max && attempts < 50) {
+        attempts += 1;
+        const cand = generateCandidate();
+        if (/ceo/i.test(cand)) continue;
 
-      // check usernames collection and users collection for existence
-      const nameSnap = await db.collection("usernames").doc(cand.toLowerCase()).get();
-      if (nameSnap.exists) continue;
-      const userSnap = await db.collection("users").where("username", "==", cand.toLowerCase()).limit(1).get();
-      if (!userSnap.empty) continue;
+        // check usernames collection and users collection for existence
+        const nameSnap = await db
+          .collection("usernames")
+          .doc(cand.toLowerCase())
+          .get();
+        if (nameSnap.exists) continue;
+        const userSnap = await db
+          .collection("users")
+          .where("username", "==", cand.toLowerCase())
+          .limit(1)
+          .get();
+        if (!userSnap.empty) continue;
 
-      suggestions.add(cand);
+        suggestions.add(cand);
+      }
+
+      res.json({ success: true, suggestions: Array.from(suggestions) });
+    } catch (err) {
+      console.error("Suggest username error:", err);
+      res
+        .status(500)
+        .json({ success: false, error: "Unable to generate suggestions" });
     }
-
-    res.json({ success: true, suggestions: Array.from(suggestions) });
-  } catch (err) {
-    console.error("Suggest username error:", err);
-    res.status(500).json({ success: false, error: "Unable to generate suggestions" });
-  }
-});
+  },
+);
 
 // Verify security answers for password reset
 router.post("/verify-security-answers", async (req, res) => {
@@ -867,7 +946,10 @@ router.post("/reset-password", async (req, res) => {
     const normalizedUsername = (username || "").toString().toLowerCase().trim();
 
     // Verify token purpose and username match (compare normalized username)
-    if (decoded.purpose !== "password-reset" || decoded.username !== normalizedUsername) {
+    if (
+      decoded.purpose !== "password-reset" ||
+      decoded.username !== normalizedUsername
+    ) {
       return res.status(401).json({
         success: false,
         error: "Token mismatch or invalid purpose",

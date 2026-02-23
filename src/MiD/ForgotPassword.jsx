@@ -91,7 +91,7 @@ function ForgotPassword() {
         showInfo("Username verified! Please answer your security questions.");
         setStep(2);
       } else {
-        const msg = result && result.exists === false ? (result.message || "Username is invalid") : (result.error || "Username is invalid");
+        const msg = result && result.exists === false ? "Username is invalid" : (result.error || "Username is invalid");
         showError(msg);
         setErrors({ username: msg });
       }
