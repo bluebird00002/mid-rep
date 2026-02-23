@@ -644,6 +644,19 @@ router.get("/check-username", rateLimit(60, 60 * 1000), sanitize(), async (req, 
 
     if (nameDoc.exists) {
       console.log(`❌ Username taken: ${trimmedUsername}`);
+      try {
+        console.log("DEBUG: usernames doc data:", nameDoc.data());
+        const userSnap = await db
+          .collection("users")
+          .where("username", "==", lowerUsername)
+          .limit(1)
+          .get();
+        console.log("DEBUG: users query size:", userSnap.size);
+        if (!userSnap.empty) console.log("DEBUG: user doc:", { id: userSnap.docs[0].id, ...userSnap.docs[0].data() });
+      } catch (dbgErr) {
+        console.warn("DEBUG: error while logging related docs:", dbgErr && dbgErr.message);
+      }
+
       return res.json({
         available: false,
         error: "This username is already taken.",
