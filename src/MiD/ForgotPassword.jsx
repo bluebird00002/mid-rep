@@ -86,13 +86,14 @@ function ForgotPassword() {
     setErrors({});
     try {
       const result = await api.verifyUsername(username);
-      if (result.success) {
+      if (result.success && result.exists) {
         setUsernameVerified(true);
         showInfo("Username verified! Please answer your security questions.");
         setStep(2);
       } else {
-        showError(result.error || "Username not found");
-        setErrors({ username: result.error || "Username not found" });
+        const msg = result && result.exists === false ? (result.message || "Username not found") : (result.error || "Username not found");
+        showError(msg);
+        setErrors({ username: msg });
       }
     } catch (error) {
       showError(error.message || "Error verifying username");

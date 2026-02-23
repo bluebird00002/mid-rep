@@ -743,10 +743,13 @@ router.post("/verify-security-answers", async (req, res) => {
       });
     }
 
-    // Fetch user
+    // Normalize username for case-insensitive lookup
+    const lowerUsername = (username || "").toString().toLowerCase().trim();
+
+    // Fetch user (case-insensitive normalized)
     const usersSnap = await db
       .collection("users")
-      .where("username", "==", username)
+      .where("username", "==", lowerUsername)
       .limit(1)
       .get();
 
@@ -791,8 +794,9 @@ router.post("/verify-security-answers", async (req, res) => {
     }
 
     // Generate temporary verification token (valid for 15 minutes)
+    // Include normalized username so reset checks are consistent
     const verificationToken = jwt.sign(
-      { userId, purpose: "password-reset", username },
+      { userId, purpose: "password-reset", username: lowerUsername },
       process.env.JWT_SECRET || "default_secret_key",
       { expiresIn: "15m" },
     );
@@ -859,18 +863,21 @@ router.post("/reset-password", async (req, res) => {
       });
     }
 
-    // Verify token purpose and username match
-    if (decoded.purpose !== "password-reset" || decoded.username !== username) {
+    // Normalize username for comparison and lookup
+    const normalizedUsername = (username || "").toString().toLowerCase().trim();
+
+    // Verify token purpose and username match (compare normalized username)
+    if (decoded.purpose !== "password-reset" || decoded.username !== normalizedUsername) {
       return res.status(401).json({
         success: false,
         error: "Token mismatch or invalid purpose",
       });
     }
 
-    // Fetch user from Firestore
+    // Fetch user from Firestore using normalized username
     const usersSnap = await db
       .collection("users")
-      .where("username", "==", username)
+      .where("username", "==", normalizedUsername)
       .limit(1)
       .get();
 
