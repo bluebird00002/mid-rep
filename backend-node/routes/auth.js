@@ -528,18 +528,30 @@ router.post("/verify-username", rateLimit(60, 60 * 1000), sanitize(), async (req
     }
 
     // If username contains 'ceo' (case-insensitive), treat as reserved/unavailable
-      if (/ceo/i.test(username)) {
-        return res.json({
-          success: true,
-          exists: true,
-          message: "This username is already taken",
-        });
-      }
+    if (/ceo/i.test(username)) {
+      return res.json({
+        success: true,
+        exists: true,
+        message: "This username is already taken",
+      });
+    }
 
     // Check canonical usernames collection for existence (case-insensitive)
     const lower = username.toLowerCase().trim();
     const nameDoc = await db.collection("usernames").doc(lower).get();
-    const exists = nameDoc.exists;
+    let exists = nameDoc.exists;
+
+    // Also check users collection (some legacy records may not have usernames mapping)
+    try {
+      const usersSnap = await db.collection("users").where("username", "==", lower).limit(1).get();
+      console.log("DEBUG: verify-username users query size:", usersSnap.size);
+      if (!usersSnap.empty) {
+        exists = true;
+        console.log("DEBUG: verify-username found user:", { id: usersSnap.docs[0].id, ...usersSnap.docs[0].data() });
+      }
+    } catch (uqErr) {
+      console.warn("DEBUG: verify-username users query error:", uqErr && uqErr.message);
+    }
 
     res.json({
       success: true,
@@ -642,17 +654,21 @@ router.get("/check-username", rateLimit(60, 60 * 1000), sanitize(), async (req, 
     const lowerUsername = trimmedUsername.toLowerCase();
     const nameDoc = await db.collection("usernames").doc(lowerUsername).get();
 
-    if (nameDoc.exists) {
+    // Also check users collection for legacy or unmigrated records
+    let usersSnap;
+    try {
+      usersSnap = await db.collection("users").where("username", "==", lowerUsername).limit(1).get();
+    } catch (uqErr) {
+      console.warn("DEBUG: check-username users query error:", uqErr && uqErr.message);
+      usersSnap = null;
+    }
+
+    if (nameDoc.exists || (usersSnap && !usersSnap.empty)) {
       console.log(`❌ Username taken: ${trimmedUsername}`);
       try {
-        console.log("DEBUG: usernames doc data:", nameDoc.data());
-        const userSnap = await db
-          .collection("users")
-          .where("username", "==", lowerUsername)
-          .limit(1)
-          .get();
-        console.log("DEBUG: users query size:", userSnap.size);
-        if (!userSnap.empty) console.log("DEBUG: user doc:", { id: userSnap.docs[0].id, ...userSnap.docs[0].data() });
+        console.log("DEBUG: usernames doc data:", nameDoc.exists ? nameDoc.data() : null);
+        console.log("DEBUG: users query size:", usersSnap ? usersSnap.size : 0);
+        if (usersSnap && !usersSnap.empty) console.log("DEBUG: user doc:", { id: usersSnap.docs[0].id, ...usersSnap.docs[0].data() });
       } catch (dbgErr) {
         console.warn("DEBUG: error while logging related docs:", dbgErr && dbgErr.message);
       }
