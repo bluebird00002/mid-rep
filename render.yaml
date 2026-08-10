@@ -17,7 +17,7 @@ services:
       - key: DB_NAME
         value: mid_diary
       - key: JWT_SECRET
-        scope: build,runtime
+        generateValue: true
       - key: JWT_EXPIRES_IN
         value: 1d
       - key: FIREBASE_SERVICE_ACCOUNT
