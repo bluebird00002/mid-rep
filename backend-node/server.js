@@ -5,7 +5,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.js";
 import memoryRoutes from "./routes/memories.js";
-import imageRoutes from "./routes/images.js";
 import searchRoutes from "./routes/search.js";
 import statsRoutes from "./routes/stats.js";
 import tagRoutes from "./routes/tags.js";
@@ -35,6 +34,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
+
+// Cloudinary's SDK is expensive to initialize on small hosting instances.
+// Load the image router on its first request so Render can observe the HTTP
+// port immediately during deployment.
+let imageRoutesPromise;
+const lazyImageRoutes = (req, res, next) => {
+  imageRoutesPromise ||= import("./routes/images.js").then((module) => module.default);
+  imageRoutesPromise.then((router) => router(req, res, next)).catch(next);
+};
 
 // Middleware - CORS configuration
 const allowedOrigins = (
@@ -144,7 +152,7 @@ app.use("/api/auth", authRoutes);
 console.log("✅ Auth routes mounted at /api/auth");
 app.use("/api/memories", memoryRoutes);
 console.log("✅ Memories routes mounted at /api/memories");
-app.use("/api/images", imageRoutes);
+app.use("/api/images", lazyImageRoutes);
 console.log("✅ Images routes mounted at /api/images");
 app.use("/api/search", searchRoutes);
 console.log("✅ Search routes mounted at /api/search");
