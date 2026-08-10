@@ -1,5 +1,5 @@
 // Gemini AI Service for MiD Diary System
-// Handles all AI interactions with Google Gemini API
+// Legacy filename retained for compatibility; requests use the backend's Groq-powered Mother service.
 
 import api from "./api";
 

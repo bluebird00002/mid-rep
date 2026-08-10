@@ -58,8 +58,8 @@ The backend requires:
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
 - `ALLOWED_ORIGINS`
-- `XAI_API_KEY` for Mother (server-side only)
-- optionally `XAI_MODEL` (defaults to `grok-4.5`)
+- `GROQ_API_KEY` for Mother (server-side only)
+- optionally `GROQ_MODEL` (defaults to `openai/gpt-oss-120b`)
 - `MID_BOOTSTRAP_ADMIN_USERNAME` for the initial trusted superadmin, if administration is enabled
 
 Render configuration is provided in [`render.yaml`](./render.yaml). The web SPA can be built with Vite and deployed using [`vercel.json`](./vercel.json).

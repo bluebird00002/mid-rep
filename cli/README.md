@@ -91,7 +91,7 @@ elibariki> Remember that I launched my first CLI today, tagged milestone.
 Mother> I've saved that memory for you.
 ```
 
-Mother uses xAI Grok through the authenticated MiD backend. The `XAI_API_KEY`
+Mother uses Groq through the authenticated MiD backend. The `GROQ_API_KEY`
 must exist only in the backend environment; it is never accepted or stored by
 the CLI. Mother can search the signed-in user's memories, save text memories
 after a clear request, and count the library. Memory content is treated as

@@ -1,57 +1,52 @@
-const XAI_RESPONSES_URL = "https://api.x.ai/v1/responses";
+const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MAX_TOOL_ROUNDS = 5;
 const REQUEST_TIMEOUT_MS = 60_000;
 
 export const MOTHER_TOOLS = [
   {
     type: "function",
-    name: "search_memories",
-    description: "Search or browse only the signed-in user's MiD memories. Use this when the user asks what they remember, mentions a topic/date/tag/category, or asks for recent memories.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "Words to find in memory content, description, category, or tags." },
-        category: { type: "string", description: "Optional exact category filter." },
-        tags: { type: "array", items: { type: "string" }, description: "Optional tags; a memory matching any supplied tag is returned." },
-        limit: { type: "integer", minimum: 1, maximum: 20, default: 10 },
+    function: {
+      name: "search_memories",
+      description: "Search or browse only the signed-in user's MiD memories. Use this when the user asks what they remember, mentions a topic/date/tag/category, or asks for recent memories.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Words to find in memory content, description, category, or tags." },
+          category: { type: "string", description: "Optional exact category filter." },
+          tags: { type: "array", items: { type: "string" }, description: "Optional tags; a memory matching any supplied tag is returned." },
+          limit: { type: "integer", minimum: 1, maximum: 20, default: 10 },
+        },
       },
     },
   },
   {
     type: "function",
-    name: "save_memory",
-    description: "Save a new text memory for the signed-in user. Call only when the user clearly asks Mother to remember, record, note, or save something.",
-    parameters: {
-      type: "object",
-      properties: {
-        content: { type: "string", description: "The memory text to save, preserving the user's meaning." },
-        category: { type: "string", description: "Optional organizational category." },
-        tags: { type: "array", items: { type: "string" }, description: "Optional short lowercase labels." },
+    function: {
+      name: "save_memory",
+      description: "Save a new text memory for the signed-in user. Call only when the user clearly asks Mother to remember, record, note, or save something.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: { type: "string", description: "The memory text to save, preserving the user's meaning." },
+          category: { type: "string", description: "Optional organizational category." },
+          tags: { type: "array", items: { type: "string" }, description: "Optional short lowercase labels." },
+        },
+        required: ["content"],
       },
-      required: ["content"],
     },
   },
   {
     type: "function",
-    name: "library_stats",
-    description: "Count the signed-in user's memories and images.",
-    parameters: { type: "object", properties: {} },
+    function: {
+      name: "library_stats",
+      description: "Count the signed-in user's memories and images.",
+      parameters: { type: "object", properties: {} },
+    },
   },
 ];
 
-function responseText(response) {
-  if (typeof response.output_text === "string" && response.output_text.trim()) return response.output_text.trim();
-  return (response.output || [])
-    .filter((item) => item.type === "message")
-    .flatMap((item) => item.content || [])
-    .filter((item) => item.type === "output_text" && typeof item.text === "string")
-    .map((item) => item.text)
-    .join("\n")
-    .trim();
-}
-
-async function xaiRequest(payload, { apiKey, fetchImpl }) {
-  const response = await fetchImpl(XAI_RESPONSES_URL, {
+async function groqRequest(payload, { apiKey, fetchImpl }) {
+  const response = await fetchImpl(GROQ_CHAT_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -68,7 +63,7 @@ async function xaiRequest(payload, { apiKey, fetchImpl }) {
     body = {};
   }
   if (!response.ok) {
-    const error = new Error(body?.error?.message || body?.error || `xAI returned ${response.status}`);
+    const error = new Error(body?.error?.message || body?.error || `Groq returned ${response.status}`);
     error.status = response.status;
     throw error;
   }
@@ -77,59 +72,58 @@ async function xaiRequest(payload, { apiKey, fetchImpl }) {
 
 export async function runMother({
   apiKey,
-  model = "grok-4.5",
+  model = "openai/gpt-oss-120b",
   systemPrompt,
   messages,
-  conversationId,
   executeTool,
   fetchImpl = fetch,
 }) {
-  let response = await xaiRequest({
-    model,
-    input: [{ role: "system", content: systemPrompt }, ...messages],
-    tools: MOTHER_TOOLS,
-    tool_choice: "auto",
-    parallel_tool_calls: false,
-    max_output_tokens: 700,
-    prompt_cache_key: conversationId,
-  }, { apiKey, fetchImpl });
+  const conversation = [{ role: "system", content: systemPrompt }, ...messages];
   const actions = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-    const calls = (response.output || []).filter((item) => item.type === "function_call");
+    const response = await groqRequest({
+      model,
+      messages: conversation,
+      tools: MOTHER_TOOLS,
+      tool_choice: "auto",
+      parallel_tool_calls: false,
+      max_completion_tokens: 700,
+    }, { apiKey, fetchImpl });
+    const assistant = response?.choices?.[0]?.message;
+    if (!assistant) throw new Error("Groq returned an empty response");
+    const calls = Array.isArray(assistant.tool_calls) ? assistant.tool_calls : [];
     if (!calls.length) {
-      return { message: responseText(response) || "I'm here with you. What would you like to remember?", actions };
+      const content = typeof assistant.content === "string" ? assistant.content.trim() : "";
+      return { message: content || "I'm here with you. What would you like to remember?", actions };
     }
-    const outputs = [];
+
+    conversation.push({
+      role: "assistant",
+      content: assistant.content || null,
+      tool_calls: calls,
+    });
     for (const call of calls) {
       let args = {};
       try {
-        args = JSON.parse(call.arguments || "{}");
+        args = JSON.parse(call.function?.arguments || "{}");
       } catch {
         args = {};
       }
       let result;
       try {
-        result = await executeTool(call.name, args);
+        result = await executeTool(call.function?.name, args);
         if (result?.action) actions.push(result.action);
       } catch (error) {
         result = { error: error.message || "Tool failed" };
       }
-      outputs.push({
-        type: "function_call_output",
-        call_id: call.call_id,
-        output: JSON.stringify(result),
+      conversation.push({
+        role: "tool",
+        tool_call_id: call.id,
+        name: call.function?.name,
+        content: JSON.stringify(result),
       });
     }
-    response = await xaiRequest({
-      model,
-      previous_response_id: response.id,
-      input: outputs,
-      tools: MOTHER_TOOLS,
-      parallel_tool_calls: false,
-      max_output_tokens: 700,
-      prompt_cache_key: conversationId,
-    }, { apiKey, fetchImpl });
   }
   throw new Error("Mother reached the maximum number of memory actions for one message");
 }
