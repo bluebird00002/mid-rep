@@ -38,9 +38,6 @@ router.get("/", async (req, res) => {
       return bTime - aTime;
     });
 
-    // Apply limit in-memory if provided
-    if (limit) memories = memories.slice(0, parseInt(limit));
-
     // Filter by tags if specified (in-memory)
     // Filter by tags if specified (in-memory) - case-insensitive
     if (tags) {
@@ -82,6 +79,9 @@ router.get("/", async (req, res) => {
         return memCat === categoryLc;
       });
     }
+
+    // Limit only after all filters so matching memories are not discarded early.
+    if (limit) memories = memories.slice(0, parseInt(limit, 10));
 
     console.log(`✅ Retrieved ${memories.length} memories for user ${userId}`);
     res.json({
@@ -174,11 +174,8 @@ router.post("/", async (req, res) => {
 
     console.log("📝 Create memory request:", {
       type,
-      content: content?.substring(0, 50),
       category,
-      tags,
-      tagsType: typeof tags,
-      isArray: Array.isArray(tags),
+      tagCount: Array.isArray(tags) ? tags.length : 0,
     });
 
     // Normalize tags (accept array or comma-separated string)

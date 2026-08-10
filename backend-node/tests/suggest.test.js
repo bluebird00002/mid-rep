@@ -6,7 +6,6 @@ describe('Suggestion generator', () => {
       const s = generateUsernameSuggestion();
       expect(s.startsWith('mid-')).toBe(true);
       expect(/^[a-z0-9\-]+$/.test(s)).toBe(true);
-      expect(/ceo/i.test(s)).toBe(false);
       expect(s.length).toBeGreaterThanOrEqual(8);
     }
   });

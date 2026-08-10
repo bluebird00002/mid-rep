@@ -4,7 +4,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { v2 as cloudinary } from "cloudinary";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import { authenticateToken } from "../middleware/auth.js";
 import { admin, db } from "../config/firebase.js";
 
@@ -20,62 +19,21 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// If Cloudinary env vars are set, configure Cloudinary storage; otherwise fall back to disk storage
-let upload;
-if (
+// Cloudinary is used in production; local disk remains a development fallback.
+const cloudinaryEnabled = Boolean(
   process.env.CLOUDINARY_CLOUD_NAME &&
   process.env.CLOUDINARY_API_KEY &&
   process.env.CLOUDINARY_API_SECRET
-) {
+);
+if (cloudinaryEnabled) {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
+}
 
-  const cloudinaryStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-      // Determine folder based on request
-      const folder =
-        req.body?.folder || process.env.CLOUDINARY_FOLDER || "mid-uploads";
-      const ext = path.extname(file.originalname).replace(".", "");
-      const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-
-      return {
-        folder: folder,
-        format: ext || "jpg",
-        public_id: `img_${unique}`,
-      };
-    },
-  });
-
-  upload = multer({
-    storage: cloudinaryStorage,
-    limits: {
-      fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
-    },
-    fileFilter: (req, file, cb) => {
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-      ];
-      if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(
-          new Error(
-            "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."
-          )
-        );
-      }
-    },
-  });
-} else {
-  // Disk storage fallback
-  const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, uploadDir);
     },
@@ -83,31 +41,60 @@ if (
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       cb(null, "img_" + uniqueSuffix + path.extname(file.originalname));
     },
-  });
+});
 
-  upload = multer({
-    storage: storage,
-    limits: {
-      fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
-    },
-    fileFilter: (req, file, cb) => {
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-      ];
-      if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(
-          new Error(
-            "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."
-          )
-        );
-      }
-    },
+const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+const upload = multer({
+  storage: cloudinaryEnabled ? multer.memoryStorage() : diskStorage,
+  limits: {
+    fileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 10 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter: (req, file, cb) => {
+    if (allowedImageTypes.has(file.mimetype)) return cb(null, true);
+    cb(new Error("Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed."));
+  },
+});
+
+function uploadBufferToCloudinary(buffer, folder, authenticated = true) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "image",
+        type: authenticated ? "authenticated" : "upload",
+        public_id: `img_${Date.now()}_${Math.round(Math.random() * 1e9)}`,
+      },
+      (error, result) => (error ? reject(error) : resolve(result)),
+    );
+    stream.end(buffer);
   });
+}
+
+function imageDeliveryUrl(data) {
+  if (cloudinaryEnabled && data.filename && data.delivery_type === "authenticated") {
+    const extension = data.format || path.extname(data.original_name || "").slice(1) || "jpg";
+    return cloudinary.utils.private_download_url(data.filename, extension, {
+      resource_type: "image",
+      type: "authenticated",
+      expires_at: Math.floor(Date.now() / 1000) + 5 * 60,
+      attachment: false,
+    });
+  }
+  if (data.file_path && /^https?:\/\//i.test(data.file_path)) return data.file_path;
+  if (data.filename) return `/uploads/${encodeURIComponent(data.filename)}`;
+  return null;
+}
+
+function hasValidImageSignature(buffer, mimeType) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return false;
+  if (mimeType === "image/jpeg") return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (mimeType === "image/png") return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimeType === "image/gif") return ["GIF87a", "GIF89a"].includes(buffer.subarray(0, 6).toString("ascii"));
+  if (mimeType === "image/webp") {
+    return buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+  }
+  return false;
 }
 
 // Upload image
@@ -115,6 +102,7 @@ router.post(
   "/",
   upload.fields([{ name: "file", maxCount: 1 }]),
   async (req, res) => {
+    let uploadedFile = null;
     try {
       if (!req.files || !req.files.file || !req.files.file[0]) {
         return res.status(400).json({
@@ -124,8 +112,28 @@ router.post(
       }
 
       const file = req.files.file[0];
+      uploadedFile = file;
       const userId = req.user.userId;
       const { description = "", tags = "[]", folder } = req.body;
+      const bytes = file.buffer || fs.readFileSync(file.path);
+      if (!hasValidImageSignature(bytes, file.mimetype)) {
+        if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        return res.status(400).json({ success: false, error: "File content is not a valid supported image" });
+      }
+
+      if (cloudinaryEnabled) {
+        const targetFolder = folder === "mid-profile-pics"
+          ? "mid-profile-pics"
+          : process.env.CLOUDINARY_FOLDER || "mid-uploads";
+        const isProfileImage = folder === "mid-profile-pics";
+        const result = await uploadBufferToCloudinary(bytes, targetFolder, !isProfileImage);
+        file.location = result.secure_url;
+        file.path = result.secure_url;
+        file.filename = result.public_id;
+        file.public_id = result.public_id;
+        file.format = result.format;
+        file.delivery_type = result.type;
+      }
 
       // If this is a profile image upload, just return the URL
       if (folder === "mid-profile-pics") {
@@ -153,6 +161,8 @@ router.post(
         filename: file.filename || file.public_id || null,
         original_name: file.originalname,
         file_path: file.path || file.location || null,
+        format: file.format || path.extname(file.originalname).slice(1).toLowerCase() || null,
+        delivery_type: file.delivery_type || (cloudinaryEnabled ? "authenticated" : "local"),
         description,
         tags: tagsArray,
         memory_id: null,
@@ -171,7 +181,7 @@ router.post(
         success: true,
         data: {
           id: docRef.id,
-          image_url: docData.file_path,
+          image_url: imageDeliveryUrl(docData),
           filename: docData.filename,
           original_name: docData.original_name,
           description: docData.description,
@@ -181,9 +191,9 @@ router.post(
       });
     } catch (error) {
       console.error("Upload image error:", error);
-      if (file) {
+      if (uploadedFile) {
         // If file is on disk, remove it. Cloudinary uploads are remote URLs, so skip.
-        const localPath = file.path;
+        const localPath = uploadedFile.path;
         try {
           if (localPath && fs.existsSync(localPath)) {
             fs.unlinkSync(localPath);
@@ -238,7 +248,7 @@ router.get("/", async (req, res) => {
       id: img.id,
       filename: img.filename,
       original_name: img.original_name,
-      image_url: img.file_path || null,
+      image_url: imageDeliveryUrl(img),
       description: img.description,
       tags: img.tags || [],
       memory_id: img.memory_id || null,
@@ -334,6 +344,9 @@ router.get("/:id", async (req, res) => {
     }
 
     const image = { id: doc.id, ...doc.data() };
+    if ((image.userId || image.user_id) !== userId) {
+      return res.status(404).json({ success: false, error: "Image not found" });
+    }
     const formatTimestamp = (ts) => {
       if (!ts) return null;
       if (ts instanceof admin.firestore.Timestamp) {
@@ -348,7 +361,7 @@ router.get("/:id", async (req, res) => {
           id: image.id,
           filename: image.filename,
           original_name: image.original_name,
-          image_url: image.file_path || null,
+          image_url: imageDeliveryUrl(image),
           description: image.description,
           tags: image.tags || [],
           memory_id: image.memory_id || null,
@@ -381,6 +394,9 @@ router.put("/:id", async (req, res) => {
     }
 
     const image = { id: doc.id, ...doc.data() };
+    if ((image.userId || image.user_id) !== userId) {
+      return res.status(404).json({ success: false, error: "Image not found" });
+    }
 
     // Update image record in Firestore
     await docRef.update({
@@ -428,6 +444,9 @@ router.delete("/:id", async (req, res) => {
     }
 
     const data = doc.data();
+    if ((data.userId || data.user_id) !== userId) {
+      return res.status(404).json({ success: false, error: "Image not found" });
+    }
     const filePath = data.file_path;
     const publicId = data.filename;
 
@@ -436,7 +455,10 @@ router.delete("/:id", async (req, res) => {
     // Delete file from Cloudinary if configured, otherwise delete local file
     if (process.env.CLOUDINARY_CLOUD_NAME && publicId) {
       try {
-        await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: "image",
+          type: data.delivery_type === "authenticated" ? "authenticated" : "upload",
+        });
       } catch (e) {
         console.warn("Failed to delete image from Cloudinary:", e);
       }
@@ -464,7 +486,7 @@ async function updateTagCount(userId, tag) {
     const tagRef = db.collection("tags").doc(docId);
     await tagRef.set(
       {
-        userId,
+        user_id: userId,
         name: tag,
         count: admin.firestore.FieldValue.increment(1),
         created_at: admin.firestore.FieldValue.serverTimestamp(),

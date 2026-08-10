@@ -1,5 +1,6 @@
 ﻿import React from "react";
 import "./forgotPassword.css";
+import { PASSWORD_RULES, validatePasswordStrength } from "../utils/passwordValidation";
 import {
   User,
   CheckCircle,
@@ -64,11 +65,8 @@ function ForgotPassword() {
 
   const validateStep3 = () => {
     const newErrors = {};
-    if (!newPassword) {
-      newErrors.newPassword = "New password is required";
-    } else if (newPassword.length < 6) {
-      newErrors.newPassword = "Password must be at least 6 characters";
-    }
+    const passwordValidation = validatePasswordStrength(newPassword);
+    if (!passwordValidation.valid) newErrors.newPassword = passwordValidation.error;
     if (!confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password";
     } else if (newPassword !== confirmPassword) {
@@ -534,7 +532,7 @@ function ForgotPassword() {
                           type={showPassword ? "text" : "password"}
                           name="newPassword"
                           id="newPassword"
-                          placeholder="New Password (min 6 characters)"
+                          placeholder="Strong password (8+ characters)"
                           value={newPassword}
                           onChange={(e) => {
                             setNewPassword(e.target.value);
@@ -563,6 +561,7 @@ function ForgotPassword() {
                           {errors.newPassword}
                         </div>
                       )}
+                      <small className="field-hint">{PASSWORD_RULES}</small>
                     </div>
                     <div>
                       <div className="form-grp">

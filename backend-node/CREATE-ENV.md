@@ -16,7 +16,7 @@ DB_PASSWORD=
 DB_NAME=mid_diary
 
 # JWT Configuration (IMPORTANT!)
-JWT_SECRET=mid-super-secret-jwt-key-change-this-in-production-2024
+JWT_SECRET=<generate-a-long-random-secret>
 JWT_EXPIRES_IN=7d
 
 # File Upload

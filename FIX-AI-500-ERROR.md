@@ -13,7 +13,7 @@ This means Render backend is rejecting the AI request - most likely because `GEM
 
 1. Go to https://makersuite.google.com/app/apikey
 2. Click **"Create API Key"** 
-3. Copy the key (looks like: `AIzaSyA-C7Fp0ZUE0ZJ_YfpJy-TQYoTosvTIqPM`)
+3. Copy the key (never paste a real key into documentation or Git)
 4. **Save it somewhere safe**
 
 ### Step 2: Add to Render Dashboard

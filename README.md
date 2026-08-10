@@ -1,206 +1,110 @@
-# MiD - My Individual Diary
+# MiD — My Individual Diary
 
-A powerful, CLI-style personal diary system with encrypted storage, visual memories, and advanced search capabilities.
+MiD is a secure, multi-user memory platform with a command-line interface. Install the repository on any supported computer, sign in to the same account, and retrieve the same Firestore memories and Cloudinary images.
 
-## Features
+The original React website remains in `src/`. MiD CLI 2 is the recommended interface and uses the hardened Node API in `backend-node/`.
 
-### Core Features
-- **CLI Interface**: Terminal-style command interface for natural interaction
-- **Memory Types**: Support for text, tables, lists, timelines, and images
-- **Encrypted Storage**: All memories are encrypted using AES-256
-- **Visual Memories**: Upload and store images with descriptions and tags
-- **Advanced Search**: Search by content, tags, categories, dates
-- **Categories & Tags**: Organize memories with custom categories and tags
-- **Command System**: Natural language commands for all operations
+## Architecture
 
-### Memory Types
-1. **Text Memories**: Simple text entries
-2. **Tables**: Structured data (expenses, items, etc.)
-3. **Lists**: Task lists, reminders
-4. **Timelines**: Chronological event sequences
-5. **Images**: Photos with descriptions and tags
+```text
+MiD CLI on any PC
+  ├─ account sign-in (session stays in memory only)
+  └─ HTTPS
+          ↓
+Node / Express API
+  ├─ Firebase Authentication Data + Firestore memories
+  └─ authenticated Cloudinary image assets
+```
 
-## Installation
+Each account is isolated by the user ID inside its signed JWT. The account password and session token are never stored by the normal online CLI. Legacy offline vaults remain available explicitly with `--local`.
 
-### Frontend Setup
-```bash
+## Install the CLI
+
+Node.js 20.9 or newer is required.
+
+```powershell
+git clone <repository-url>
+cd mid-rep\cli
 npm install
-npm run dev
+npm install -g .
+mid
 ```
 
-### Backend Setup (XAMPP)
+The Sharp image library and platform binary install automatically. See [the complete CLI guide](./cli/README.md) for terminal compatibility and troubleshooting.
 
-1. **Copy Backend Files**
-   - Copy `backend` folder to `C:\xampp\htdocs\MiD\`
+## Connect and use
 
-2. **Create Database**
-   - Open phpMyAdmin: http://localhost/phpmyadmin
-   - Create database: `mid_diary`
-   - Import `backend/api/database.sql`
-
-3. **Configure**
-   - Update `backend/api/config.php` with your database credentials
-   - Create `uploads` directory: `C:\xampp\htdocs\MiD\uploads\`
-
-4. **Start Services**
-   - Start Apache and MySQL in XAMPP
-   - Test API: http://localhost/MiD/api/stats.php
-
-See `backend/SETUP.md` for detailed setup instructions.
-
-## Usage
-
-### Basic Commands
-
-#### Create Memory
-```
-create memory: "Today I went to the park"
-create memory in category: happy "I feel great today!"
-create memory with tags: family, weekend "Had dinner with family"
+```text
+mid> register yourname
+mid> add "My first online memory" --tags personal
+mid> show --tags personal
+mid> image add "C:\Pictures\memory.jpg" --description "A good day"
+mid> image list
+mid> image show <id>
 ```
 
-#### Create Table
-```
-create table:
-columns: item, price
-rows:
-  - lunch, 5000
-  - transport, 2000
-```
+Existing accounts use `login <username>`. Existing MiD CLI 1 local entries can be uploaded once with `sync`.
 
-#### Create List
-```
-create list:
-- finish assignment
-- call mom
-- buy groceries
-```
+Run `about` for the platform introduction and `help` for the complete command list.
 
-#### Create Timeline
-```
-create timeline:
-- 8:00 woke up
-- 10:00 meeting
-- 14:00 lunch
-```
+## Deploy the online API
 
-#### Save Image
-```
-save picture:
-[select file]
-description: "My birthday celebration"
-tags: birthday, happy, cake
+The backend requires:
+
+- `NODE_ENV=production`
+- `JWT_SECRET`
+- `FIREBASE_SERVICE_ACCOUNT`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `ALLOWED_ORIGINS`
+- `XAI_API_KEY` for Mother (server-side only)
+- optionally `XAI_MODEL` (defaults to `grok-4.5`)
+- `MID_BOOTSTRAP_ADMIN_USERNAME` for the initial trusted superadmin, if administration is enabled
+
+Render configuration is provided in [`render.yaml`](./render.yaml). The web SPA can be built with Vite and deployed using [`vercel.json`](./vercel.json).
+
+```powershell
+cd backend-node
+npm install
+npm start
 ```
 
-#### Edit Memory
-```
-edit memory #12: "Updated content"
-update memory #5: add: "Additional notes"
-```
+For local development, copy `backend-node/.env.example` to `.env`, configure Firebase and Cloudinary, then connect the CLI to `http://127.0.0.1:3000/api`. Remote HTTP URLs are rejected; production must use HTTPS.
 
-#### Delete
-```
-delete memory #3
-delete picture #5
-```
+## Image portability
 
-#### Search/Retrieve
-```
-Mother, show me memories tagged: family
-Mother, bring up my happy moments
-Mother, open entries from: December 2023
-Mother, search: "graduation"
-```
+MiD decodes JPEG, PNG, WebP, and GIF files and renders them as terminal pixels:
 
-#### System Commands
-```
-help - Show available commands
-clear - Clear terminal
-```
+- True-color ANSI half blocks in capable terminals
+- Portable monochrome characters in limited terminals, redirected output, or `--mono` mode
+- Full-resolution system viewer through `image show <id> --open`
 
-## Project Structure
+Windows Terminal with Cascadia Mono gives the best Windows presentation. `MID_ASCII=1` replaces Unicode interface borders when using an older console.
 
-```
-kusirye-u web/
-├── src/
-│   ├── MiD/
-│   │   ├── AboutMiD.jsx      # Tutorial system
-│   │   ├── MyDiary.jsx       # Main diary interface
-│   │   ├── Home.jsx          # Login page
-│   │   └── ...
-│   ├── components/
-│   │   ├── MemoryCard.jsx    # Memory display component
-│   │   └── MemoryCard.css
-│   ├── services/
-│   │   └── api.js            # API service layer
-│   └── utils/
-│       └── commandParser.js  # Command parser
-├── backend/
-│   ├── api/
-│   │   ├── config.php        # Configuration
-│   │   ├── memories.php      # Memory endpoints
-│   │   ├── images.php        # Image endpoints
-│   │   ├── search.php        # Search endpoint
-│   │   └── ...
-│   └── uploads/              # Image storage
-└── package.json
+## Security status
+
+The current implementation includes:
+
+- Authenticated and ownership-checked memory/image operations
+- Authenticated Cloudinary assets with short-lived signed delivery URLs
+- Login, recovery, registration, and AI rate limiting
+- Production JWT-secret enforcement
+- Production CORS restriction
+- Secret-gated legacy administration routes
+- Real image-file signature validation
+- Multer 2 upload handling
+- No request-body or diary-content logging
+- Encrypted local session-token storage
+
+Firestore memory text is protected by provider access controls and HTTPS, but is not end-to-end encrypted from server operators. Do not describe the online database as zero-knowledge encryption.
+
+## Tests
+
+```powershell
+npm run cli:test
+cd backend-node
+npm test
 ```
 
-## API Endpoints
-
-### Base URL
-```
-http://localhost/MiD/api
-```
-
-### Endpoints
-- `GET /memories.php` - Get all memories
-- `POST /memories.php` - Create memory
-- `PUT /memories.php?id={id}` - Update memory
-- `DELETE /memories.php?id={id}` - Delete memory
-- `POST /images.php` - Upload image
-- `GET /search.php?q={query}` - Search memories
-- `GET /stats.php` - Get statistics
-
-See `backend/README.md` for complete API documentation.
-
-## Development
-
-### Local Storage Fallback
-The system includes a local storage fallback for development. If the API is unavailable, memories are stored in browser localStorage.
-
-### Adding New Features
-1. Add command parsing in `src/utils/commandParser.js`
-2. Add API endpoint in `backend/api/`
-3. Update frontend handler in `src/MiD/MyDiary.jsx`
-4. Add UI component if needed
-
-## Security
-
-- All data is encrypted using AES-256
-- Images stored securely in uploads directory
-- SQL injection protection via prepared statements
-- CORS configured for API access
-- File type validation for uploads
-
-## Technologies
-
-- **Frontend**: React, Vite, Framer Motion
-- **Backend**: PHP, MySQL
-- **Styling**: CSS3 with CLI aesthetics
-- **Fonts**: JetBrains Mono
-
-## License
-
-Private project - All rights reserved
-
-## Support
-
-For issues or questions, refer to:
-- `backend/SETUP.md` - Backend setup
-- `backend/README.md` - API documentation
-- Tutorial system in the app (type "help" in terminal)
-
----
-
-**MiD** - Your memories, encrypted and organized.
+See [cli/README.md](./cli/README.md) for usage, installation requirements, backup behavior, security boundaries, and all commands.

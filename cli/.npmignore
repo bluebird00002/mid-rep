@@ -1,0 +1,4 @@
+.npm-cache/
+test/
+*.midvault
+*.midvault.lock

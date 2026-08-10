@@ -16,17 +16,21 @@ class MiDApi {
   constructor() {
     this.baseURL = API_BASE_URL;
     this.token = null;
+    this.adminToken = null;
   }
 
   setToken(token) {
     this.token = token;
+    if (!token) this.adminToken = null;
   }
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = { "Content-Type": "application/json", ...options.headers };
-    if (this.token) headers["Authorization"] = `Bearer ${this.token}`;
-    const config = { ...options, headers };
+    const selectedToken = options.admin ? this.adminToken : this.token;
+    if (selectedToken) headers["Authorization"] = `Bearer ${selectedToken}`;
+    const { admin: _admin, ...requestOptions } = options;
+    const config = { ...requestOptions, headers };
     try {
       const response = await fetch(url, config);
       const contentType = response.headers.get("content-type");
@@ -71,37 +75,43 @@ class MiDApi {
 
   // Admin
   async deleteUser(userId) {
-    return this.request(`/admin/users/${userId}`, { method: "DELETE" });
-  }
-  async resetUserPassword(userId, newPassword) {
-    return this.request(`/admin/users/${userId}/reset-password`, {
-      method: "POST",
-      body: JSON.stringify({ newPassword }),
+    return this.request(`/admin/users/${userId}/status`, {
+      method: "PATCH",
+      admin: true,
+      body: JSON.stringify({ status: "suspended" }),
     });
+  }
+  async resetUserPassword() {
+    throw new Error("Administrators cannot view or replace user passwords. Use the account recovery flow.");
   }
   async getAllUsers() {
-    return this.request("/admin/users");
+    const result = await this.request("/admin/users", { admin: true });
+    return { ...result, users: result?.data?.users || [] };
   }
   async getActivityLog() {
-    return this.request("/admin/activity");
+    const result = await this.request("/admin/activity", { admin: true });
+    return { ...result, logs: result?.data?.activity || [] };
   }
   async changeAdminPassword(payload) {
-    return this.request("/admin/change-password", {
+    return this.request("/auth/change-password", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ currentPassword: payload.oldPassword, newPassword: payload.newPassword }),
     });
   }
-  async changeDefaultPassword(payload) {
-    return this.request("/admin/passdef-change", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+  async changeDefaultPassword() {
+    throw new Error("Shared default admin passwords were removed. Access is controlled by server-side roles.");
   }
   async adminLogin(payload) {
-    return this.request("/admin/login", {
+    const result = await this.request("/admin/login", {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    this.adminToken = result?.data?.token || null;
+    return result;
+  }
+
+  adminLogout() {
+    this.adminToken = null;
   }
 
   // Auth

@@ -1,4 +1,4 @@
-import { validateUsernameFormat, generateUsernameSuggestion, containsRestrictedKeyword } from "../utils/usernameValidation.js";
+import { validateUsernameFormat, generateUsernameSuggestion } from "../utils/usernameValidation.js";
 
 describe('Username validation utils', () => {
   test('rejects short and long names', () => {
@@ -6,6 +6,10 @@ describe('Username validation utils', () => {
     expect(validateUsernameFormat('ab').valid).toBe(false);
     const long = 'a'.repeat(30);
     expect(validateUsernameFormat(long).valid).toBe(false);
+  });
+
+  test('accepts a username containing exactly four characters', () => {
+    expect(validateUsernameFormat('user').valid).toBe(true);
   });
 
   test('rejects invalid characters and spaces', () => {
@@ -18,9 +22,8 @@ describe('Username validation utils', () => {
     expect(validateUsernameFormat('user1').valid).toBe(true);
   });
 
-  test('detects restricted keyword', () => {
-    expect(containsRestrictedKeyword('ceo-user')).toBe(true);
-    expect(validateUsernameFormat('ceobad')).toEqual(expect.objectContaining({ valid: false }));
+  test('allows ceo text because privileges are role-based', () => {
+    expect(validateUsernameFormat('ceo-user').valid).toBe(true);
   });
 
   test('suggestion format', () => {

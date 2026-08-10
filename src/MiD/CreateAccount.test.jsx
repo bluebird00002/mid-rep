@@ -38,16 +38,16 @@ describe("validateUsernameFormat", () => {
   });
 
   // ----- Length validation tests -----
-  test("should reject username shorter than 5 characters", () => {
+  test("should reject username shorter than 4 characters", () => {
     const result = validateUsernameFormat("abc");
     expect(result.valid).toBe(false);
-    expect(result.error).toBe("Username must be at least 5 characters.");
+    expect(result.error).toBe("Username must be at least 4 characters.");
   });
 
-  test("should reject username exactly 4 characters", () => {
+  test("should accept username exactly 4 characters", () => {
     const result = validateUsernameFormat("abcd");
-    expect(result.valid).toBe(false);
-    expect(result.error).toBe("Username must be at least 5 characters.");
+    expect(result.valid).toBe(true);
+    expect(result.error).toBeNull();
   });
 
   test("should accept username exactly 5 characters", () => {

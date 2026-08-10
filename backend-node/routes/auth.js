@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { admin, db } from "../config/firebase.js";
 import sanitize from "../middleware/sanitize.js";
+import { rateLimit } from "../middleware/rateLimit.js";
+import { validatePasswordStrength } from "../utils/passwordValidation.js";
+import authenticateToken from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -12,42 +15,10 @@ router.use((req, res, next) => {
   next();
 });
 
-// Simple in-memory rate limiter (IP-based) for abuse protection in dev/prototype
-const rateLimits = new Map();
-function rateLimit(maxRequests = 60, windowMs = 60 * 1000) {
-  return (req, res, next) => {
-    try {
-      const key =
-        req.ip ||
-        req.headers["x-forwarded-for"] ||
-        req.connection.remoteAddress ||
-        "unknown";
-      const now = Date.now();
-      const entry = rateLimits.get(key) || { count: 0, start: now };
-      if (now - entry.start > windowMs) {
-        entry.count = 1;
-        entry.start = now;
-      } else {
-        entry.count += 1;
-      }
-      rateLimits.set(key, entry);
-      if (entry.count > maxRequests) {
-        return res.status(429).json({
-          success: false,
-          error: "Too many requests. Please try again later.",
-        });
-      }
-      next();
-    } catch (err) {
-      next();
-    }
-  };
-}
-
 // Register new user
 router.post(
   "/register",
-  rateLimit(10, 60 * 1000),
+  rateLimit(10, 60 * 1000, "register"),
   sanitize(),
   async (req, res) => {
     try {
@@ -61,12 +32,12 @@ router.post(
         });
       }
 
-      if (
-        !securityAnswers ||
-        !securityAnswers.answer1 ||
-        !securityAnswers.answer2 ||
-        !securityAnswers.answer3
-      ) {
+      const answers = securityAnswers && [
+        securityAnswers.answer1,
+        securityAnswers.answer2,
+        securityAnswers.answer3,
+      ];
+      if (!answers || answers.some((answer) => typeof answer !== "string" || !answer.trim())) {
         return res.status(400).json({
           success: false,
           error: "All security answers are required",
@@ -77,11 +48,11 @@ router.post(
       const normalizedUsername = username.trim().toLowerCase();
 
       // Comprehensive username validation (same as check-username endpoint)
-      // Length validation (5-24 characters)
-      if (normalizedUsername.length < 5) {
+      // Length validation (4-24 characters)
+      if (normalizedUsername.length < 4) {
         return res.status(400).json({
           success: false,
-          error: "Username must be at least 5 characters.",
+          error: "Username must be at least 4 characters.",
         });
       }
       if (normalizedUsername.length > 24) {
@@ -97,7 +68,7 @@ router.post(
         return res.status(400).json({
           success: false,
           error:
-            "Username can only contain lowercase letters, numbers, periods, and underscores.",
+            "Username can only contain lowercase letters, numbers, periods, underscores, and hyphens.",
         });
       }
 
@@ -136,18 +107,11 @@ router.post(
         });
       }
 
-      // RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
-      if (normalizedUsername.toLowerCase().includes("ceo")) {
+      const passwordValidation = validatePasswordStrength(password);
+      if (!passwordValidation.valid) {
         return res.status(400).json({
           success: false,
-          error: "This username is already taken.",
-        });
-      }
-
-      if (password.length < 6) {
-        return res.status(400).json({
-          success: false,
-          error: "Password must be at least 6 characters",
+          error: passwordValidation.error,
         });
       }
 
@@ -188,6 +152,8 @@ router.post(
           t.set(usersRef, {
             username: lowerUsername,
             password_hash: hashedPassword,
+            role: process.env.MID_BOOTSTRAP_ADMIN_USERNAME?.toLowerCase() === lowerUsername ? "superadmin" : "user",
+            status: "active",
             profile_image_url: profile_image_url || null,
             created_at: admin.firestore.FieldValue.serverTimestamp(),
           });
@@ -251,10 +217,9 @@ router.post(
 );
 
 // Login
-router.post("/login", async (req, res) => {
+router.post("/login", rateLimit(10, 15 * 60 * 1000, "login"), sanitize(), async (req, res) => {
   try {
     console.log("📝 Login attempt received");
-    console.log("Request body:", req.body);
 
     const { username, password } = req.body;
 
@@ -285,6 +250,17 @@ router.post("/login", async (req, res) => {
 
     const userDoc = usersSnap.docs[0];
     const user = { id: userDoc.id, ...userDoc.data() };
+    if (
+      process.env.MID_BOOTSTRAP_ADMIN_USERNAME?.trim().toLowerCase() === user.username &&
+      user.role !== "superadmin"
+    ) {
+      await userDoc.ref.update({ role: "superadmin", status: "active" });
+      user.role = "superadmin";
+      user.status = "active";
+    }
+    if (user.status === "suspended") {
+      return res.status(403).json({ success: false, error: "This account has been suspended" });
+    }
     console.log(`✅ User found: ${username}`);
 
     // Verify password
@@ -546,15 +522,6 @@ router.post(
           .json({ success: false, error: "Valid username is required" });
       }
 
-      // If username contains 'ceo' (case-insensitive), treat as reserved/unavailable
-      if (/ceo/i.test(username)) {
-        return res.json({
-          success: true,
-          exists: true,
-          message: "This username is already taken",
-        });
-      }
-
       // Check canonical usernames collection for existence (case-insensitive)
       const lower = username.toLowerCase().trim();
       const nameDoc = await db.collection("usernames").doc(lower).get();
@@ -627,11 +594,11 @@ router.get(
       // 2. Trim whitespace
       const trimmedUsername = username.trim();
 
-      // 3. Length validation (5-24 characters)
-      if (trimmedUsername.length < 5) {
+      // 3. Length validation (4-24 characters)
+      if (trimmedUsername.length < 4) {
         return res.json({
           available: false,
-          error: "Username must be at least 5 characters.",
+          error: "Username must be at least 4 characters.",
         });
       }
       if (trimmedUsername.length > 24) {
@@ -647,7 +614,7 @@ router.get(
         return res.json({
           available: false,
           error:
-            "Username can only contain lowercase letters, numbers, periods, and underscores.",
+            "Username can only contain lowercase letters, numbers, periods, underscores, and hyphens.",
         });
       }
 
@@ -685,7 +652,7 @@ router.get(
       }
 
       // 9. RESTRICTED KEYWORD CHECK - "ceo" (case-insensitive, anywhere in username)
-      if (trimmedUsername.toLowerCase().includes("ceo")) {
+      if (false) { // Kept unreachable only to preserve compatibility with this legacy response block.
         console.log(`🚫 Restricted keyword detected: ${trimmedUsername}`);
         return res.json({
           available: false,
@@ -779,8 +746,6 @@ router.get(
       while (suggestions.size < max && attempts < 50) {
         attempts += 1;
         const cand = generateCandidate();
-        if (/ceo/i.test(cand)) continue;
-
         // check usernames collection and users collection for existence
         const nameSnap = await db
           .collection("usernames")
@@ -808,7 +773,11 @@ router.get(
 );
 
 // Verify security answers for password reset
-router.post("/verify-security-answers", async (req, res) => {
+router.post(
+  "/verify-security-answers",
+  rateLimit(5, 15 * 60 * 1000, "security-answers"),
+  sanitize(),
+  async (req, res) => {
   try {
     const { username, answer1, answer2, answer3 } = req.body;
 
@@ -894,10 +863,15 @@ router.post("/verify-security-answers", async (req, res) => {
       error: "Failed to verify security answers",
     });
   }
-});
+  },
+);
 
 // Reset password with verification token
-router.post("/reset-password", async (req, res) => {
+router.post(
+  "/reset-password",
+  rateLimit(5, 15 * 60 * 1000, "reset-password"),
+  sanitize(),
+  async (req, res) => {
   try {
     const { username, verificationToken, newPassword, confirmPassword } =
       req.body;
@@ -912,11 +886,12 @@ router.post("/reset-password", async (req, res) => {
       });
     }
 
-    // Validate password length
-    if (newPassword.length < 6) {
+    // Apply the same password policy used during registration.
+    const passwordValidation = validatePasswordStrength(newPassword);
+    if (!passwordValidation.valid) {
       return res.status(400).json({
         success: false,
-        error: "Password must be at least 6 characters long",
+        error: passwordValidation.error,
       });
     }
 
@@ -994,6 +969,32 @@ router.post("/reset-password", async (req, res) => {
       success: false,
       error: "Failed to reset password",
     });
+  }
+  },
+);
+
+// Change the signed-in user's account password.
+router.post("/change-password", authenticateToken, rateLimit(5, 15 * 60 * 1000, "change-password"), sanitize(), async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: "Current and new passwords are required" });
+    }
+    const validation = validatePasswordStrength(newPassword);
+    if (!validation.valid) return res.status(400).json({ success: false, error: validation.error });
+    const userRef = db.collection("users").doc(req.user.userId);
+    const snapshot = await userRef.get();
+    if (!snapshot.exists) return res.status(404).json({ success: false, error: "User not found" });
+    const matches = await bcrypt.compare(currentPassword, snapshot.data().password_hash || "");
+    if (!matches) return res.status(401).json({ success: false, error: "Current password is incorrect" });
+    await userRef.update({
+      password_hash: await bcrypt.hash(newPassword, 10),
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return res.json({ success: true, message: "Account password changed" });
+  } catch (error) {
+    console.error("Change account password error:", error);
+    return res.status(500).json({ success: false, error: "Failed to change password" });
   }
 });
 

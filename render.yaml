@@ -18,7 +18,25 @@ services:
         value: mid_diary
       - key: JWT_SECRET
         scope: build,runtime
-      - key: GEMINI_API_KEY
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: FIREBASE_SERVICE_ACCOUNT
         scope: build,runtime
+      - key: CLOUDINARY_CLOUD_NAME
+        scope: build,runtime
+      - key: CLOUDINARY_API_KEY
+        scope: build,runtime
+      - key: CLOUDINARY_API_SECRET
+        scope: build,runtime
+      - key: CLOUDINARY_FOLDER
+        value: mid-uploads
+      - key: MAX_FILE_SIZE
+        value: 10485760
+      - key: MID_BOOTSTRAP_ADMIN_USERNAME
+        scope: build,runtime
+      - key: XAI_API_KEY
+        scope: build,runtime
+      - key: XAI_MODEL
+        value: grok-4.5
       - key: ALLOWED_ORIGINS
         scope: build,runtime

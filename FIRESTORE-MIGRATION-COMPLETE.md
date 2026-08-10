@@ -66,7 +66,7 @@ npm install
 
 ```
 FIREBASE_SERVICE_ACCOUNT=your_firebase_service_account_json_or_base64
-JWT_SECRET=dev-secret-key-for-testing
+JWT_SECRET=<generate-a-long-random-secret-even-for-development>
 ```
 
 3. **Start backend**:

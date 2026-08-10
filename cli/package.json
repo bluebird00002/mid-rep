@@ -1,0 +1,21 @@
+{
+  "name": "mid-diary-cli",
+  "version": "2.0.0",
+  "description": "Secure multi-user online diary with adaptive terminal image rendering",
+  "type": "module",
+  "bin": {
+    "mid": "./bin/mid.js"
+  },
+  "scripts": {
+    "start": "node ./bin/mid.js",
+    "test": "node --test --test-isolation=none"
+  },
+  "dependencies": {
+    "sharp": "^0.35.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

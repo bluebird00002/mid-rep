@@ -6,9 +6,8 @@
 // ============================================
 // Constants
 // ============================================
-export const USERNAME_MIN_LENGTH = 5;
+export const USERNAME_MIN_LENGTH = 4;
 export const USERNAME_MAX_LENGTH = 24;
-export const RESTRICTED_KEYWORD = "ceo";
 
 // ============================================
 // Format Validation (Client-side)
@@ -21,9 +20,9 @@ export const validateUsernameFormat = (username) => {
 
   const trimmed = username.trim();
 
-  // Length validation (5-24 characters)
+  // Length validation (4-24 characters)
   if (trimmed.length < USERNAME_MIN_LENGTH) {
-    return { valid: false, error: "Username must be at least 5 characters." };
+    return { valid: false, error: "Username must be at least 4 characters." };
   }
 
   if (trimmed.length > USERNAME_MAX_LENGTH) {
@@ -36,7 +35,7 @@ export const validateUsernameFormat = (username) => {
     return {
       valid: false,
       error:
-        "Username can only contain lowercase letters, numbers, periods, and underscores.",
+        "Username can only contain lowercase letters, numbers, periods, underscores, and hyphens.",
     };
   }
 
@@ -73,14 +72,6 @@ export const validateUsernameFormat = (username) => {
     };
   }
 
-  // Restricted keyword check (case-insensitive, anywhere in username)
-  if (trimmed.toLowerCase().includes(RESTRICTED_KEYWORD)) {
-    return {
-      valid: false,
-      error: "This username is already taken.",
-    };
-  }
-
   return { valid: true, error: null };
 };
 
@@ -100,14 +91,6 @@ export const generateUsernameSuggestion = () => {
 };
 
 // ============================================
-// Check if username contains restricted keyword
-// Case-insensitive substring check
-// ============================================
-export const containsRestrictedKeyword = (username) => {
-  if (!username) return false;
-  return username.toLowerCase().includes(RESTRICTED_KEYWORD);
-};
-
 // ============================================
 // Normalize username (lowercase + trim)
 // ============================================

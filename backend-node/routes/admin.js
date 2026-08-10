@@ -1,397 +1,179 @@
 import express from "express";
-import { createRequire } from "module";
-import { db as firestore, admin as firebaseAdmin } from "../config/firebase.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { admin, db } from "../config/firebase.js";
+import authenticateToken from "../middleware/auth.js";
+import sanitize from "../middleware/sanitize.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 
-// Use createRequire to allow conditional require of native bcrypt
-const require = createRequire(import.meta.url);
-let bcrypt;
-try {
-  bcrypt = require("bcrypt");
-} catch (e) {
+const router = express.Router();
+const ADMIN_ROLES = new Set(["admin", "superadmin"]);
+
+async function audit(actor, action, target = null, details = {}) {
+  await db.collection("admin_audit").add({
+    actor_user_id: actor.userId,
+    actor_username: actor.username,
+    actor_role: actor.role,
+    action,
+    target_user_id: target,
+    details,
+    created_at: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+async function requireAdminToken(req, res, next) {
   try {
-    bcrypt = require("bcryptjs");
-    console.log("Using bcryptjs fallback for password hashing/comparison");
-  } catch (err) {
-    console.error("No bcrypt or bcryptjs available:", err);
-    throw err;
+    const token = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : null;
+    if (!token) return res.status(401).json({ success: false, error: "Admin session required" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.scope !== "admin" || !ADMIN_ROLES.has(decoded.role)) {
+      return res.status(403).json({ success: false, error: "Administrator privileges required" });
+    }
+    const user = await db.collection("users").doc(decoded.userId).get();
+    const current = user.exists ? user.data() : null;
+    if (!current || current.status === "suspended" || current.role !== decoded.role) {
+      return res.status(403).json({ success: false, error: "Administrator access is no longer active" });
+    }
+    req.adminUser = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ success: false, error: "Invalid or expired admin session" });
   }
 }
 
-const router = express.Router();
-
-// Delete a user by ID (permanent) - using Firestore
-router.delete("/users/:id", async (req, res) => {
-  const userId = req.params.id;
+// Re-authenticate an already signed-in account and elevate only pre-authorized roles.
+router.post("/login", authenticateToken, rateLimit(5, 15 * 60 * 1000, "admin-login"), sanitize(), async (req, res) => {
   try {
-    await firestore.collection("users").doc(userId).delete();
-    res.json({ success: true, message: "User deleted successfully" });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
-  }
-});
-
-// Reset a user's password (admin sets new password)
-router.post("/users/:id/reset-password", async (req, res) => {
-  const userId = req.params.id;
-  const { newPassword } = req.body;
-  if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({
-      success: false,
-      message: "New password must be at least 6 characters.",
+    const password = typeof req.body.password === "string" ? req.body.password : "";
+    const snapshot = await db.collection("users").doc(req.user.userId).get();
+    if (!snapshot.exists) return res.status(404).json({ success: false, error: "User not found" });
+    const user = snapshot.data();
+    if (user.status === "suspended" || !ADMIN_ROLES.has(user.role)) {
+      return res.status(403).json({ success: false, error: "This account does not have administrator privileges" });
+    }
+    if (!await bcrypt.compare(password, user.password_hash || "")) {
+      return res.status(401).json({ success: false, error: "Incorrect account password" });
+    }
+    const identity = { userId: snapshot.id, username: user.username, role: user.role, scope: "admin" };
+    const adminToken = jwt.sign(identity, process.env.JWT_SECRET, { expiresIn: "15m" });
+    await audit(identity, "admin.login");
+    return res.json({
+      success: true,
+      data: { token: adminToken, expiresIn: "15m", admin: { username: user.username, role: user.role } },
     });
-  }
-  try {
-    const hash = await bcrypt.hash(newPassword, 10);
-    await firestore.collection("users").doc(userId).update({
-      password_hash: hash,
-      updated_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-    });
-    res.json({ success: true, message: "Password reset successfully" });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+  } catch (error) {
+    console.error("Admin login error:", error);
+    return res.status(500).json({ success: false, error: "Admin login failed" });
   }
 });
 
-// Admin login
-router.post("/login", async (req, res) => {
-  // New behavior:
-  // - Admin username is derived from the authenticated user's username: <username>-admin
-  // - If an admin account exists for that derived username, verify the provided password against its hash
-  // - If no admin account exists, check the admin_defaults collection for a default password; if it matches,
-  //   create a new admin account for that user with the default password hash and mark main_admin if first
-  const { username, password, userId } = req.body;
-  const baseUsername = (username || "").toString().trim();
-  const adminUsername = baseUsername ? `${baseUsername}-admin` : "admin";
+router.use(requireAdminToken);
+
+router.get("/me", (req, res) => res.json({ success: true, data: { admin: req.adminUser } }));
+
+router.get("/overview", async (req, res) => {
   try {
-    // Look up existing admin account for this user
-    const snap = await firestore
-      .collection("admin_accounts")
-      .where("username", "==", adminUsername)
-      .limit(1)
-      .get();
-
-    if (!snap.empty) {
-      const doc = snap.docs[0];
-      const adminDoc = { id: doc.id, ...(doc.data() || {}) };
-      const providedPwd = (password || "").toString().trim();
-      console.log(`Admin login attempt for username=${adminUsername} (existing account).`);
-      let match = false;
-      try {
-        match = await bcrypt.compare(providedPwd, adminDoc.password_hash || "");
-      } catch (e) {
-        console.warn("bcrypt compare failed:", e && e.message);
-        match = false;
-      }
-      console.log(`Password compare result for ${adminUsername}: ${match}`);
-      if (!match) return res.status(401).json({ success: false, message: "Incorrect password" });
-
-      // Record admin login event for auditing
-      try {
-        await firestore.collection("admin_logins").add({
-          username: adminDoc.username,
-          userId: userId || null,
-          login_time: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-          ip: req.ip || null,
-        });
-      } catch (logErr) {
-        console.warn("Failed to record admin login:", logErr.message || logErr);
-      }
-
-      return res.json({ success: true, admin: { id: adminDoc.id, username: adminDoc.username, main_admin: !!adminDoc.main_admin } });
-    }
-
-    // No existing admin account for this user -> check default password store
-    // Look for admin default record
-    const defSnap = await firestore.collection("admin_defaults").limit(1).get();
-    let defaultHash = null;
-    let defaultDocId = null;
-    if (!defSnap.empty) {
-      const d = defSnap.docs[0];
-      defaultHash = d.data()?.password_hash || null;
-      defaultDocId = d.id;
-    }
-
-    // If no default exists, treat this login as creating the first/default password and main admin
-    if (!defaultHash) {
-      // First admin: set the provided password as the default (hash it) and create admin account
-      const provided = (password || "").toString().trim();
-      if (!provided) return res.status(401).json({ success: false, message: "Incorrect password" });
-      const hash = await bcrypt.hash(provided, 10);
-      const defRef = firestore.collection("admin_defaults").doc();
-      await defRef.set({ password_hash: hash, created_by: userId || null, created_at: firebaseAdmin.firestore.FieldValue.serverTimestamp() });
-      defaultHash = hash;
-      defaultDocId = defRef.id;
-      console.log(`Initialized admin default password by userId=${userId || "unknown"}`);
-    }
-
-    // Compare provided password to default hash
-    const providedPwd = (password || "").toString().trim();
-    let defaultMatch = false;
-    try {
-      defaultMatch = defaultHash ? await bcrypt.compare(providedPwd, defaultHash) : false;
-    } catch (e) {
-      console.warn("bcrypt compare for default failed:", e && e.message);
-      defaultMatch = false;
-    }
-    console.log(`Default password compare result for ${adminUsername}: ${defaultMatch}`);
-    if (!defaultMatch) return res.status(401).json({ success: false, message: "Incorrect password" });
-
-    // Create a new admin account for this user using the default hash
-    // Determine if there is an existing main admin
-    const mainSnap = await firestore.collection("admin_accounts").where("main_admin", "==", true).limit(1).get();
-    const isMain = mainSnap.empty; // if no main admin exists, this new admin becomes main
-    const newRef = firestore.collection("admin_accounts").doc();
-    await newRef.set({
-      username: adminUsername,
-      password_hash: defaultHash,
-      created_by_user_id: userId || null,
-      main_admin: !!isMain,
-      created_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Record admin login event
-    try {
-      await firestore.collection("admin_logins").add({
-        username: adminUsername,
-        userId: userId || null,
-        login_time: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-        ip: req.ip || null,
-      });
-    } catch (logErr) {
-      console.warn("Failed to record admin login:", logErr.message || logErr);
-    }
-
-    return res.json({ success: true, admin: { id: newRef.id, username: adminUsername, main_admin: !!isMain } });
-  } catch (err) {
-    console.error("Admin login error:", err && err.message);
-    return res.status(500).json({ success: false, message: "Server error", error: err.message });
+    const [users, memories, images] = await Promise.all([
+      db.collection("users").count().get(),
+      db.collection("memories").count().get(),
+      db.collection("images").count().get(),
+    ]);
+    return res.json({ success: true, data: {
+      users: users.data().count,
+      memories: memories.data().count,
+      images: images.data().count,
+      role: req.adminUser.role,
+    } });
+  } catch (error) {
+    console.error("Admin overview error:", error);
+    return res.status(500).json({ success: false, error: "Unable to load system overview" });
   }
 });
 
-// Debug endpoint to check DB connectivity quickly (remove or protect in production)
-router.get("/debug-db", async (req, res) => {
-  try {
-    const [rows] = await db.query("SELECT 1 as ok");
-    res.json({ success: true, ok: rows[0] });
-  } catch (err) {
-    console.error("DB debug query failed:", err);
-    res
-      .status(503)
-      .json({
-        success: false,
-        message: "Database unavailable",
-        error: err.message,
-      });
-  }
-});
-
-// Change admin password
-router.post("/change-password", async (req, res) => {
-  const { username, oldPassword, newPassword } = req.body;
-  try {
-    let uname = (username || "").toString().trim() || "admin";
-    // accept base username or admin username; ensure we use the admin account form
-    if (!uname.endsWith("-admin")) uname = `${uname}-admin`;
-    const snapshot = await firestore
-      .collection("admin_accounts")
-      .where("username", "==", uname)
-      .limit(1)
-      .get();
-    if (snapshot.empty)
-      return res
-        .status(401)
-        .json({ success: false, message: "Admin not found" });
-    const doc = snapshot.docs[0];
-    const adminDoc = { id: doc.id, ...(doc.data() || {}) };
-
-    // Defensive checks
-    const providedOld = (oldPassword || "").toString();
-    // Log attempt metadata (avoid logging passwords)
-    console.log(`Admin password change attempt for username=${uname} (has_hash=${!!adminDoc.password_hash})`);
-
-    let match = false;
-    if (adminDoc.password_hash) {
-      try {
-        match = await bcrypt.compare(providedOld, adminDoc.password_hash);
-      } catch (e) {
-        console.warn("bcrypt compare failed:", e && e.message);
-        match = false;
-      }
-    }
-
-    if (!match)
-      return res
-        .status(401)
-        .json({ success: false, message: "Incorrect old password" });
-
-    if (!newPassword || newPassword.length < 6)
-      return res
-        .status(400)
-        .json({ success: false, message: "New password must be at least 6 characters" });
-
-    const newHash = await bcrypt.hash(newPassword.toString(), 10);
-    await firestore.collection("admin_accounts").doc(adminDoc.id).update({
-      password_hash: newHash,
-      updated_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-    });
-    res.json({ success: true, message: "Password changed successfully" });
-  } catch (err) {
-    console.error("Change-password error:", err && err.message);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
-  }
-});
-
-// List all users (for admin dashboard)
 router.get("/users", async (req, res) => {
   try {
-    const snapshot = await firestore.collection("users").get();
-    const users = await Promise.all(
-      snapshot.docs.map(async (d) => {
-        const raw = d.data() || {};
-        const u = { id: d.id, ...raw };
-        // Count memories (text & image) and images stored in separate collection
-        let memCount = 0;
-        let imgCount = 0;
-        try {
-          const memSnap = await firestore
-            .collection("memories")
-            .where("user_id", "==", u.id)
-            .get();
-          memCount = memSnap.size || 0;
-        } catch (e) {
-          memCount = 0;
-        }
-        try {
-          const imgSnap = await firestore
-            .collection("images")
-            .where("user_id", "==", u.id)
-            .get();
-          imgCount = imgSnap.size || 0;
-        } catch (e) {
-          imgCount = 0;
-        }
-        const totalCount = (memCount || 0) + (imgCount || 0);
-
-        // Normalize created_at to ISO string if it's a Firestore Timestamp
-        let createdAt = null;
-        try {
-          if (raw && raw.created_at && raw.created_at.toDate) {
-            createdAt = raw.created_at.toDate().toISOString();
-          } else if (raw && raw.created_at) {
-            createdAt = raw.created_at;
-          }
-        } catch (e) {
-          createdAt = raw.created_at || null;
-        }
-
-        // Return only necessary fields + counts and avatar
-        return {
-          id: u.id,
-          username: u.username || null,
-          created_at: createdAt,
-          memoriesCount: memCount,
-          imagesCount: imgCount,
-          totalCount: totalCount,
-          profile_image_url: u.profile_image_url || null,
-        };
-      }),
-    );
-    res.json({ success: true, users });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 100);
+    const snapshot = await db.collection("users").orderBy("created_at", "desc").limit(limit).get();
+    const users = snapshot.docs.map((document) => {
+      const value = document.data();
+      return {
+        id: document.id,
+        username: value.username,
+        role: value.role || "user",
+        status: value.status || "active",
+        created_at: value.created_at?.toDate?.().toISOString() || value.created_at || null,
+      };
+    });
+    return res.json({ success: true, data: { users } });
+  } catch (error) {
+    console.error("Admin users error:", error);
+    return res.status(500).json({ success: false, error: "Unable to load users" });
   }
 });
 
-// List activity logs (for admin dashboard)
 router.get("/activity", async (req, res) => {
   try {
-    const snapshot = await firestore
-      .collection("login_track")
-      .orderBy("login_time", "desc")
-      .limit(100)
-      .get();
-    const logs = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
-    res.json({ success: true, logs });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+    const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 50, 1), 100);
+    const snapshot = await db.collection("admin_audit").orderBy("created_at", "desc").limit(limit).get();
+    const activity = snapshot.docs.map((document) => {
+      const value = document.data();
+      return { id: document.id, ...value, created_at: value.created_at?.toDate?.().toISOString() || null };
+    });
+    return res.json({ success: true, data: { activity } });
+  } catch (error) {
+    console.error("Admin activity error:", error);
+    return res.status(500).json({ success: false, error: "Unable to load audit activity" });
   }
 });
 
-// Change default admin password (only main admin may perform)
-router.post("/passdef-change", async (req, res) => {
-  const { username, adminPassword, oldDefaultPassword, newDefaultPassword } = req.body;
+router.patch("/users/:id/status", sanitize(), async (req, res) => {
   try {
-    if (!username || !adminPassword || !oldDefaultPassword || !newDefaultPassword)
-      return res.status(400).json({ success: false, message: "Missing parameters" });
-
-    // Normalize admin username to <user>-admin form
-    let adminU = (username || "").toString().trim();
-    if (!adminU.endsWith("-admin")) adminU = `${adminU}-admin`;
-
-    const snap = await firestore.collection("admin_accounts").where("username", "==", adminU).limit(1).get();
-    if (snap.empty) return res.status(401).json({ success: false, message: "Admin account not found" });
-    const doc = snap.docs[0];
-    const adminDoc = { id: doc.id, ...(doc.data() || {}) };
-
-    // Only main admin OR usernames containing 'ceo' (case-insensitive) can change the default
-    const adminNameLower = (adminDoc.username || "").toString().toLowerCase();
-    const isCeo = adminNameLower.includes("ceo");
-    if (!adminDoc.main_admin && !isCeo)
-      return res.status(403).json({ success: false, message: "Only main admin may change the default password" });
-
-    // Verify main admin's password
-    const adminPwd = (adminPassword || "").toString().trim();
-    let ok = false;
-    try {
-      ok = await bcrypt.compare(adminPwd, adminDoc.password_hash || "");
-    } catch (e) {
-      console.warn("bcrypt compare failed for admin auth:", e && e.message);
-      ok = false;
+    const status = req.body.status;
+    if (!["active", "suspended"].includes(status)) {
+      return res.status(400).json({ success: false, error: "Status must be active or suspended" });
     }
-    if (!ok) return res.status(401).json({ success: false, message: "Incorrect admin password" });
-
-    // Fetch current default
-    const defSnap = await firestore.collection("admin_defaults").limit(1).get();
-    if (defSnap.empty)
-      return res.status(400).json({ success: false, message: "No default password set" });
-    const defDoc = defSnap.docs[0];
-    const defData = defDoc.data() || {};
-    const currentHash = defData.password_hash || null;
-    const providedOld = (oldDefaultPassword || "").toString().trim();
-    let oldMatch = false;
-    try {
-      oldMatch = currentHash ? await bcrypt.compare(providedOld, currentHash) : false;
-    } catch (e) {
-      console.warn("bcrypt compare failed for default password:", e && e.message);
-      oldMatch = false;
+    if (req.params.id === req.adminUser.userId) {
+      return res.status(400).json({ success: false, error: "You cannot change your own status" });
     }
-    if (!oldMatch) return res.status(401).json({ success: false, message: "Incorrect current default password" });
+    const target = await db.collection("users").doc(req.params.id).get();
+    if (!target.exists) return res.status(404).json({ success: false, error: "User not found" });
+    const targetRole = target.data().role || "user";
+    if (ADMIN_ROLES.has(targetRole) && req.adminUser.role !== "superadmin") {
+      return res.status(403).json({ success: false, error: "Only a superadmin can manage another administrator" });
+    }
+    await target.ref.update({ status, updated_at: admin.firestore.FieldValue.serverTimestamp() });
+    await audit(req.adminUser, `user.${status}`, target.id, { username: target.data().username });
+    return res.json({ success: true, message: `User ${status}` });
+  } catch (error) {
+    console.error("Admin status update error:", error);
+    return res.status(500).json({ success: false, error: "Unable to update user status" });
+  }
+});
 
-    if (!newDefaultPassword || newDefaultPassword.length < 6)
-      return res.status(400).json({ success: false, message: "New default password must be at least 6 characters" });
-
-    // Update default record with new hash
-    const newHash = await bcrypt.hash(newDefaultPassword.toString(), 10);
-    await firestore.collection("admin_defaults").doc(defDoc.id).update({
-      password_hash: newHash,
-      updated_by: adminDoc.id,
-      updated_at: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return res.json({ success: true, message: "Default admin password updated" });
-  } catch (err) {
-    console.error("passdef-change error:", err && err.message);
-    return res.status(500).json({ success: false, message: "Server error", error: err.message });
+router.patch("/users/:id/role", sanitize(), async (req, res) => {
+  try {
+    if (req.adminUser.role !== "superadmin") {
+      return res.status(403).json({ success: false, error: "Only a superadmin can change roles" });
+    }
+    if (!["user", "admin"].includes(req.body.role)) {
+      return res.status(400).json({ success: false, error: "Role must be user or admin" });
+    }
+    if (req.params.id === req.adminUser.userId) {
+      return res.status(400).json({ success: false, error: "You cannot change your own role" });
+    }
+    const target = await db.collection("users").doc(req.params.id).get();
+    if (!target.exists) return res.status(404).json({ success: false, error: "User not found" });
+    if (target.data().role === "superadmin") {
+      return res.status(403).json({ success: false, error: "The superadmin role cannot be changed here" });
+    }
+    await target.ref.update({ role: req.body.role, updated_at: admin.firestore.FieldValue.serverTimestamp() });
+    await audit(req.adminUser, "user.role_changed", target.id, { role: req.body.role, username: target.data().username });
+    return res.json({ success: true, message: `Role changed to ${req.body.role}` });
+  } catch (error) {
+    console.error("Admin role update error:", error);
+    return res.status(500).json({ success: false, error: "Unable to change user role" });
   }
 });
 

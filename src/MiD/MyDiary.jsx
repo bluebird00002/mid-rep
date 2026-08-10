@@ -72,17 +72,10 @@ function MyDiary() {
     try {
       if (!adminRestoredRef.current) {
         adminRestoredRef.current = true;
-        const persisted = localStorage.getItem("mid_admin_mode");
-        const persistedUserId = localStorage.getItem("mid_admin_userId");
-        const persistedUsername = localStorage.getItem("mid_admin_username");
-        if (persisted === "true" && persistedUserId && user?.id && persistedUserId === String(user.id)) {
-          originalUsernameRef.current = persistedUsername || user.username;
-          setAdminMode(true);
-          if (updateUser && originalUsernameRef.current) {
-            updateUser({ username: `${originalUsernameRef.current}-admin` });
-          }
-          addSystemMessage("Restored admin session.");
-        }
+        // Admin authorization is memory-only and must be requested again after refresh.
+        localStorage.removeItem("mid_admin_mode");
+        localStorage.removeItem("mid_admin_userId");
+        localStorage.removeItem("mid_admin_username");
         // Restore admin fail count and lock state
         const failCount = parseInt(localStorage.getItem("mid_admin_fail_count") || "0", 10);
         const lockUntil = parseInt(localStorage.getItem("mid_admin_lock_until") || "0", 10) || null;
@@ -308,11 +301,8 @@ function MyDiary() {
             if (updateUser && originalUsernameRef.current) {
               updateUser({ username: `${originalUsernameRef.current}-admin` });
             }
-            // Persist admin session until user explicitly exits
+            // Keep admin authorization in memory; only attempt counters persist.
             try {
-              localStorage.setItem("mid_admin_mode", "true");
-              localStorage.setItem("mid_admin_userId", user?.id || "");
-              localStorage.setItem("mid_admin_username", originalUsernameRef.current);
               // clear any previous fail count on success
               localStorage.removeItem("mid_admin_fail_count");
               localStorage.removeItem("mid_admin_lock_until");
@@ -554,21 +544,7 @@ function MyDiary() {
       return false;
     })();
     if (passdefMatch) {
-      const currentName = (user?.username || "").toString();
-      const isCeo = /ceo/i.test(currentName);
-      if (!isCeo) {
-        addSystemMessage("Command not supported.");
-        return;
-      }
-      // Show professional verification status before initiating flow
-      addSystemMessage("Verifying user role: checking account privileges. Please wait...");
-      setTimeout(() => {
-        addSystemMessage("Default password change initiated.");
-        setAdminPassFlow({ step: "main", isDefault: true, data: {} });
-        setAdminLoginMode(true);
-        setAdminPassword("");
-        addSystemMessage("Enter main admin password (or type 'cancel' to abort):");
-      }, 700);
+      addSystemMessage("Shared default admin passwords were removed. Administrator access is controlled by server-side roles.");
       return;
     }
 
@@ -3224,6 +3200,7 @@ function MyDiary() {
               onClick={() => {
                 // Exit admin mode and restore username
                 setAdminMode(false);
+                api.adminLogout();
                 if (updateUser && originalUsernameRef.current) {
                   updateUser({ username: originalUsernameRef.current });
                 }

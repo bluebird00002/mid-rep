@@ -16,6 +16,10 @@ import adminRoutes from "./routes/admin.js";
 dotenv.config();
 
 // Validate required environment variables
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET is required in production");
+}
+
 if (!process.env.JWT_SECRET) {
   console.warn("⚠️  WARNING: JWT_SECRET not set in .env file!");
   console.warn(
@@ -30,6 +34,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 
 // Middleware - CORS configuration
 const allowedOrigins = (
@@ -64,17 +69,19 @@ app.use(
       }
       // Allow all localhost variants
       else if (
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:")
+        process.env.NODE_ENV !== "production" &&
+        (origin.startsWith("http://localhost:") ||
+          origin.startsWith("http://127.0.0.1:"))
       ) {
         callback(null, true);
       }
       // Allow any local network IP (10.x.x.x, 192.168.x.x, 172.16-31.x.x)
       else if (
-        origin.match(
+        process.env.NODE_ENV !== "production" &&
+        (origin.match(
           /^http:\/\/(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i,
         ) ||
-        origin.match(/^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/)
+          origin.match(/^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/))
       ) {
         callback(null, true);
       } else {
@@ -93,9 +100,6 @@ app.use(express.urlencoded({ extended: true }));
 // Request logging middleware - AFTER body parsing
 app.use((req, res, next) => {
   console.log(`\n📥 ${req.method} ${req.path}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log("   Body:", JSON.stringify(req.body).substring(0, 100));
-  }
   next();
 });
 

@@ -22,6 +22,7 @@ import {
   validateUsernameFormat,
   generateUsernameSuggestion,
 } from "../utils/usernameValidation";
+import { PASSWORD_RULES, validatePasswordStrength } from "../utils/passwordValidation";
 
 const DEBOUNCE_DELAY = 300;
 
@@ -209,11 +210,8 @@ function CreateAccount() {
       newErrors.username = usernameError || "Username is not available";
     }
 
-    if (!password) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.valid) newErrors.password = passwordValidation.error;
 
     if (!confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password";
@@ -240,7 +238,7 @@ function CreateAccount() {
   // Check if form is valid (for submit button)
   const isFormValid = useCallback(() => {
     const usernameValid = usernameState === "valid";
-    const passwordValid = password.length >= 6;
+    const passwordValid = validatePasswordStrength(password).valid;
     const confirmMatch =
       password === confirmPassword && confirmPassword.length > 0;
     const securityAnswersFilled =
@@ -387,7 +385,7 @@ function CreateAccount() {
                         type="text"
                         name="username"
                         id="username"
-                        placeholder="Username (5-24 chars, lowercase letters, numbers, _ .)"
+                        placeholder="Username (4-24 chars)"
                         value={username}
                         onChange={handleUsernameChange}
                         onBlur={() => {
@@ -420,6 +418,10 @@ function CreateAccount() {
                           />
                         ) : null)}
                     </div>
+
+                    <small className="field-hint">
+                      Use 4-24 lowercase letters, numbers, periods, underscores, or hyphens; include at least one letter.
+                    </small>
 
                     {/* Error Message */}
                     {usernameError && (
@@ -496,17 +498,18 @@ function CreateAccount() {
                         type={showPassword ? "text" : "password"}
                         name="password"
                         id="password"
-                        placeholder="Password (min 6 characters)"
+                        placeholder="Strong password (8+ characters)"
                         value={password}
                         onChange={(e) => {
                           setPassword(e.target.value);
                           clearFieldError("password");
                         }}
                         onBlur={() => {
-                          if (!password) {
+                          const result = validatePasswordStrength(password);
+                          if (!result.valid) {
                             setErrors({
                               ...errors,
-                              password: "Password is required",
+                              password: result.error,
                             });
                           }
                         }}
@@ -533,6 +536,7 @@ function CreateAccount() {
                         {errors.password}
                       </div>
                     )}
+                    <small className="field-hint">{PASSWORD_RULES}</small>
                   </div>
 
                   {/* Confirm Password Field */}
