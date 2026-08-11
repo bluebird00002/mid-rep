@@ -484,8 +484,17 @@ async function executeImage(args, options, context) {
   if (action === "add") {
     const filePath = positionals.join(" ");
     if (!filePath) throw new Error("Usage: image add <path> [--tags a,b] [--description text]");
+    const resolvedPath = path.resolve(filePath);
+    let fileInfo;
+    try {
+      fileInfo = await stat(resolvedPath);
+    } catch (error) {
+      if (error.code === "ENOENT") throw new Error(`Image file not found: ${resolvedPath}`);
+      throw error;
+    }
+    if (!fileInfo.isFile()) throw new Error(`Image path is not a file: ${resolvedPath}`);
     context.output.write(`${ui.dim("Uploading image securely over HTTPS...")}\n`);
-    const response = await api.uploadImage(path.resolve(filePath), {
+    const response = await api.uploadImage(resolvedPath, {
       description: options.description || "",
       tags: tagsFrom(options),
     });
