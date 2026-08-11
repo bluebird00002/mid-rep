@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline/promises";
@@ -8,7 +9,7 @@ import { parseArguments, tokenize } from "./args.js";
 import { MiDOnlineApi, normalizeApiBase, unwrapImages, unwrapMemories } from "./api.js";
 import { PASSWORD_RULES, USERNAME_RULES, validateAccountPassword, validateAccountUsername } from "./accountValidation.js";
 import { defaultConfigPath, loadClientConfig, saveClientConfig } from "./clientConfig.js";
-import { cleanupViewerCache, openImage, renderImage } from "./imageRenderer.js";
+import { cleanupViewerCache, openImage, renderImage, renderNativeImage, terminalGraphicsProtocol } from "./imageRenderer.js";
 import { ask, askYesNo, readSecret, requestNewPassword } from "./prompt.js";
 import { aboutText, banner, formatEntry, formatImageCard, helpText, panel, ui } from "./ui.js";
 import {
@@ -35,6 +36,60 @@ export function defaultVaultPath(environment = process.env) {
 
 export function promptLabel(remote = {}) {
   return remote.token && remote.username ? remote.username : "mid";
+}
+
+function installWezTerm() {
+  return new Promise((resolve, reject) => {
+    const child = spawn("winget", ["install", "--id", "wez.wezterm", "--exact", "--source", "winget"], {
+      shell: false,
+      stdio: "inherit",
+      windowsHide: false,
+    });
+    child.once("error", reject);
+    child.once("exit", (code) => code === 0
+      ? resolve()
+      : reject(new Error(`WezTerm installer exited with code ${code}`)));
+  });
+}
+
+async function configureImageViewing(context, { firstRun = false } = {}) {
+  const protocol = terminalGraphicsProtocol(process.env, { isTTY: context.output.isTTY });
+  if (firstRun && context.data.remote.imageSetupSeen) return;
+
+  context.output.write(`\n${panel("IMAGE VIEWING", [
+    protocol
+      ? "This terminal supports sharp inline images. MiD is ready to display them."
+      : "MiD can always open the clear original in your computer's image viewer.",
+    protocol
+      ? "Use image show <id> or show all."
+      : "Sharp images inside the terminal require a graphics-capable terminal such as WezTerm.",
+  ], { width: Math.min(84, context.output.columns || 72) })}\n`);
+
+  context.data.remote.imageSetupSeen = true;
+  await context.persist();
+  if (protocol) return;
+
+  if (process.platform !== "win32") {
+    context.output.write(`${ui.dim("Use image open <id> for full resolution, or install a supported terminal listed in help.")}\n`);
+    return;
+  }
+
+  const approved = await context.confirm("Install WezTerm now for sharp inline images? MiD will run Windows Package Manager");
+  if (!approved) {
+    context.output.write(`${ui.dim("Skipped. Run image setup whenever you want to install it.")}\n`);
+    return;
+  }
+
+  context.output.write(`${ui.dim("Opening the verified WezTerm package installer...")}\n`);
+  try {
+    await installWezTerm();
+    context.output.write(`${ui.green("WezTerm installed.")} Open WezTerm, then run MiD there to display sharp inline images.\n`);
+  } catch (error) {
+    const message = error.code === "ENOENT"
+      ? "Windows Package Manager (winget) is unavailable. Install WezTerm from https://wezterm.org/install/windows.html"
+      : error.message;
+    throw new Error(`Could not install WezTerm: ${message}`);
+  }
 }
 
 async function collectRegistrationDetails({ suggested, askUsername, askMotherAddress, secret, write, api, beforeNetwork = async () => {} }) {
@@ -191,6 +246,7 @@ async function printRenderedImages(images, api, context, width, options = {}) {
   if (images.length === 0) return;
   const renderWidth = parseWidth(options.width, Math.min(36, (context.output.columns || 72) - 8));
   const color = !options.mono && supportsTrueColor(context.output);
+  const nativeProtocol = options.mono ? null : terminalGraphicsProtocol(process.env, { isTTY: context.output.isTTY });
   for (const image of images) {
     context.output.write(`${formatImageCard(image, { width: Math.max(40, width) })}\n`);
     if (!image.image_url) {
@@ -199,13 +255,21 @@ async function printRenderedImages(images, api, context, width, options = {}) {
     }
     try {
       const downloaded = await api.downloadImage(image.image_url);
-      context.output.write(`${await renderImage(downloaded.buffer, {
-        width: renderWidth,
-        color,
-        maxRows: 18,
-        crop: true,
-      })}\n`);
-      context.output.write(`${ui.dim(`Full resolution: image open ${image.id.slice(0, 8)}`)}\n`);
+      if (nativeProtocol) {
+        context.output.write(`${await renderNativeImage(downloaded.buffer, {
+          protocol: nativeProtocol,
+          width: renderWidth,
+          maxRows: 18,
+        })}\n`);
+      } else {
+        context.output.write(`${await renderImage(downloaded.buffer, {
+          width: renderWidth,
+          color,
+          maxRows: 18,
+          crop: true,
+        })}\n`);
+        context.output.write(`${ui.dim(`Clear original: image open ${image.id.slice(0, 8)} | Sharp inline images: run MiD in WezTerm.`)}\n`);
+      }
     } catch (error) {
       if (error.code === "MID_CANCELLED") throw error;
       context.output.write(`${ui.yellow(`Preview unavailable: ${error.message}`)}\n`);
@@ -311,6 +375,10 @@ function usesOnline(context) {
 
 async function executeImage(args, options, context) {
   const [action, ...positionals] = args;
+  if (action === "setup") {
+    await configureImageViewing(context);
+    return;
+  }
   const api = requireApi(context);
   const width = parseWidth(options.width, Math.min(40, (context.output.columns || 72) - 8));
 
@@ -341,7 +409,13 @@ async function executeImage(args, options, context) {
     const downloaded = await api.downloadImage(selected.image_url);
     context.output.write(`${formatImageCard(selected, { width: Math.max(40, width) })}\n`);
     const color = !options.mono && supportsTrueColor(context.output);
-    context.output.write(`${await renderImage(downloaded.buffer, { width, color, maxRows: 24 })}\n`);
+    const nativeProtocol = options.mono ? null : terminalGraphicsProtocol(process.env, { isTTY: context.output.isTTY });
+    if (nativeProtocol) {
+      context.output.write(`${await renderNativeImage(downloaded.buffer, { protocol: nativeProtocol, width, maxRows: 24 })}\n`);
+    } else {
+      context.output.write(`${await renderImage(downloaded.buffer, { width, color, maxRows: 24 })}\n`);
+      context.output.write(`${ui.dim("This terminal uses a character preview. Use image open for the clear original, or run MiD in WezTerm for sharp inline images.")}\n`);
+    }
     if (options.open || action === "open") {
       await openImage(downloaded.buffer, downloaded.contentType);
       context.output.write(`${ui.dim("Opened the full-resolution image in the system viewer.")}\n`);
@@ -358,7 +432,7 @@ async function executeImage(args, options, context) {
     return;
   }
 
-  throw new Error("Image commands: image add, image list, image show, image open, image delete");
+  throw new Error("Image commands: image setup, image add, image list, image show, image open, image delete");
 }
 
 async function execute(command, argv, context, preParsed = null) {
@@ -368,7 +442,12 @@ async function execute(command, argv, context, preParsed = null) {
   switch (command) {
     case "connect": {
       const base = normalizeApiBase(positionals[0]);
-      context.data.remote = { apiBase: base, username: null, token: null };
+      context.data.remote = {
+        apiBase: base,
+        username: null,
+        token: null,
+        imageSetupSeen: context.data.remote.imageSetupSeen === true,
+      };
       context.state.api = new MiDOnlineApi(base);
       await context.persist();
       context.output.write(`${ui.green("Connected configuration saved:")} ${base}\nRun ${ui.orange("login <username>")} or ${ui.orange("register <username>")}.\n`);
@@ -782,6 +861,8 @@ async function interactiveShell(context) {
     }
   };
 
+  await configureImageViewing(interactiveContext, { firstRun: true });
+
   const motherSession = async () => {
     requireApi(interactiveContext);
     const username = context.data.remote.username || "you";
@@ -906,6 +987,7 @@ export async function run(argv, streams = {}) {
       apiBase: normalizeApiBase(config.apiBase),
       username: config.username,
       token: process.env.MID_TOKEN || null,
+      imageSetupSeen: config.imageSetupSeen,
     };
     const state = { api: data.remote.token ? new MiDOnlineApi(data.remote.apiBase, data.remote.token) : null, admin: null };
     const persist = () => saveClientConfig(configPath, data.remote);

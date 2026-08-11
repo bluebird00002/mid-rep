@@ -6,6 +6,57 @@ import { spawn } from "node:child_process";
 import sharp from "sharp";
 
 const ramp = " .:-=+*#%@";
+const ESC = "\u001b";
+
+export function terminalGraphicsProtocol(environment = process.env, { isTTY = process.stdout.isTTY } = {}) {
+  if (!isTTY || environment.TERM === "dumb") return null;
+  const term = String(environment.TERM || "").toLowerCase();
+  const program = String(environment.TERM_PROGRAM || "").toLowerCase();
+  if (
+    environment.WEZTERM_PANE
+    || environment.KITTY_WINDOW_ID
+    || environment.GHOSTTY_RESOURCES_DIR
+    || term.includes("kitty")
+    || program === "wezterm"
+    || program === "ghostty"
+  ) return "kitty";
+  if (program === "iterm.app" || program === "vscode" || program === "warpterminal") return "iterm";
+  return null;
+}
+
+async function nativeDimensions(buffer, width, maxRows) {
+  const metadata = await sharp(buffer, { animated: false, limitInputPixels: 40_000_000 }).autoOrient().metadata();
+  const aspect = metadata.width && metadata.height ? metadata.height / metadata.width : 1;
+  let columns = Math.max(12, Math.min(100, Number(width) || 40));
+  let rows = Math.max(1, Math.ceil((aspect * columns) / 2));
+  const rowLimit = Math.max(6, Math.min(50, Number(maxRows) || 24));
+  if (rows > rowLimit) {
+    rows = rowLimit;
+    columns = Math.max(12, Math.floor((rows * 2) / aspect));
+  }
+  return { columns, rows };
+}
+
+export async function renderNativeImage(buffer, { protocol, width = 40, maxRows = 24 } = {}) {
+  if (!protocol) return null;
+  const { columns, rows } = await nativeDimensions(buffer, width, maxRows);
+  const png = await sharp(buffer, { animated: false, limitInputPixels: 40_000_000 }).autoOrient().png().toBuffer();
+  const encoded = png.toString("base64");
+  if (protocol === "iterm") {
+    return `${ESC}]1337;File=inline=1;width=${columns};height=${rows};preserveAspectRatio=1:${encoded}\u0007`;
+  }
+  if (protocol === "kitty") {
+    const chunks = encoded.match(/.{1,4096}/g) || [""];
+    return chunks.map((chunk, index) => {
+      const more = index < chunks.length - 1 ? 1 : 0;
+      const control = index === 0
+        ? `a=T,f=100,t=d,q=2,c=${columns},r=${rows},m=${more}`
+        : `m=${more}`;
+      return `${ESC}_G${control};${chunk}${ESC}\\`;
+    }).join("");
+  }
+  return null;
+}
 
 function blend(channel, alpha) {
   return Math.round(channel * (alpha / 255));
