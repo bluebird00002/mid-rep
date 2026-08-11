@@ -187,6 +187,26 @@ function printImages(images, output, width) {
   output.write(`${images.map((image) => formatImageCard(image, { width })).join("\n")}\n`);
 }
 
+async function printRenderedImages(images, api, context, width, options = {}) {
+  if (images.length === 0) return;
+  const renderWidth = parseWidth(options.width, Math.min(64, (context.output.columns || 72) - 8));
+  const color = !options.mono && supportsTrueColor(context.output);
+  for (const image of images) {
+    context.output.write(`${formatImageCard(image, { width: Math.max(40, width) })}\n`);
+    if (!image.image_url) {
+      context.output.write(`${ui.dim("Image preview is unavailable.")}\n`);
+      continue;
+    }
+    try {
+      const downloaded = await api.downloadImage(image.image_url);
+      context.output.write(`${await renderImage(downloaded.buffer, { width: renderWidth, color })}\n`);
+    } catch (error) {
+      if (error.code === "MID_CANCELLED") throw error;
+      context.output.write(`${ui.yellow(`Preview unavailable: ${error.message}`)}\n`);
+    }
+  }
+}
+
 function requireAdminApi(context) {
   if (!context.state.admin?.api) throw new Error('Administrator mode is not active. Run: me admin');
   context.state.admin.api.setRuntime({
@@ -525,7 +545,7 @@ async function execute(command, argv, context, preParsed = null) {
           if (command === "show") {
             const imageResponse = await api.listImages(filters);
             const images = unwrapImages(imageResponse).map(normalizeImage);
-            if (images.length) printImages(images, context.output, width);
+            if (images.length) await printRenderedImages(images, api, context, width, options);
           }
         } else {
           printEntries(filterLocalEntries(context.data, {
@@ -672,7 +692,6 @@ async function interactiveShell(context) {
       context.data.remote.username
         ? `Welcome back, ${context.data.remote.username}. Run login to open your library.`
         : "New to MiD? Run register to create your library. Already have an account? Run login.",
-      "Your account password is used for sign-in. MiD does not ask for a separate master password.",
     ], { width: Math.min(84, context.output.columns || 72) })}\n`);
   }
   context.output.write("\n");
