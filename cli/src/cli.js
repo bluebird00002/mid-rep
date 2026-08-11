@@ -749,12 +749,14 @@ async function execute(command, argv, context, preParsed = null) {
             limit: parseLimit(options.limit),
           };
           const response = await api.listMemories(filters);
-          printEntries(unwrapMemories(response).map(normalizeMemory), context.output, width);
+          const memories = unwrapMemories(response).map(normalizeMemory);
           if (command === "show") {
             const imageResponse = await api.listImages(filters);
             const images = unwrapImages(imageResponse).map(normalizeImage);
+            if (memories.length) printEntries(memories, context.output, width);
+            else if (!images.length) printEntries([], context.output, width);
             if (images.length) await printRenderedImages(images, api, context, width, options);
-          }
+          } else printEntries(memories, context.output, width);
         } else {
           printEntries(filterLocalEntries(context.data, {
             tags: requestedTags,
