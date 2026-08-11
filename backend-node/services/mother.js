@@ -2,7 +2,21 @@ const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 const MAX_TOOL_ROUNDS = 5;
 const REQUEST_TIMEOUT_MS = 60_000;
 
+export function formatMotherReply(value) {
+  return String(value || "")
+    .replace(/^(\s*)\*\s+/gm, "$1• ")
+    .replace(/(\d)\s*\*\s*(\d)/g, "$1 × $2")
+    .replace(/\*/g, "")
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/^(\s*)-\s+/gm, "$1• ")
+    .replace(/,\s*,+/g, ", ")
+    .trim();
+}
+
 export const MOTHER_TOOLS = [
+  {
+    type: "browser_search",
+  },
   {
     type: "function",
     function: {
@@ -41,6 +55,47 @@ export const MOTHER_TOOLS = [
       name: "library_stats",
       description: "Count the signed-in user's memories and images.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_relationship_preference",
+      description: "Save how Mother should address the signed-in user. Use only when the user clearly chooses son, daughter, or child.",
+      parameters: {
+        type: "object",
+        properties: {
+          preference: { type: "string", enum: ["son", "daughter", "child"] },
+        },
+        required: ["preference"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_current_time",
+      description: "Get the exact current date and time in the user's saved timezone or a specified IANA timezone. Always use this for questions asking what time or date it is now; never estimate the current time.",
+      parameters: {
+        type: "object",
+        properties: {
+          timezone: { type: "string", description: "Optional IANA timezone such as Africa/Nairobi, Europe/London, or America/New_York." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_timezone",
+      description: "Save the signed-in user's timezone when they clearly state their city or timezone. Convert a city to its IANA timezone, for example Nairobi to Africa/Nairobi.",
+      parameters: {
+        type: "object",
+        properties: {
+          timezone: { type: "string", description: "A valid IANA timezone such as Africa/Nairobi." },
+        },
+        required: ["timezone"],
+      },
     },
   },
 ];
@@ -88,13 +143,14 @@ export async function runMother({
       tools: MOTHER_TOOLS,
       tool_choice: "auto",
       parallel_tool_calls: false,
+      citation_options: "enabled",
       max_completion_tokens: 700,
     }, { apiKey, fetchImpl });
     const assistant = response?.choices?.[0]?.message;
     if (!assistant) throw new Error("Groq returned an empty response");
     const calls = Array.isArray(assistant.tool_calls) ? assistant.tool_calls : [];
     if (!calls.length) {
-      const content = typeof assistant.content === "string" ? assistant.content.trim() : "";
+      const content = formatMotherReply(assistant.content);
       return { message: content || "I'm here with you. What would you like to remember?", actions };
     }
 

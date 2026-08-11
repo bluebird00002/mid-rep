@@ -37,7 +37,7 @@ export function promptLabel(remote = {}) {
   return remote.token && remote.username ? remote.username : "mid";
 }
 
-async function collectRegistrationDetails({ suggested, askUsername, secret, write, api, beforeNetwork = async () => {} }) {
+async function collectRegistrationDetails({ suggested, askUsername, askMotherAddress, secret, write, api, beforeNetwork = async () => {} }) {
   write(`${ui.orange("Username rules:")} ${USERNAME_RULES}.\n`);
   let username = suggested || await askUsername();
   while (true) {
@@ -84,10 +84,18 @@ async function collectRegistrationDetails({ suggested, askUsername, secret, writ
       write(`${ui.red("A security answer is required.")}\n`);
     }
   };
+  write(`${ui.orange("Mother preference:")} choose how Mother should address you: son, daughter, or child.\n`);
+  let motherAddress;
+  while (!motherAddress) {
+    const answer = (await askMotherAddress()).trim().toLowerCase();
+    if (["son", "daughter", "child"].includes(answer)) motherAddress = answer;
+    else write(`${ui.red("Please choose son, daughter, or child.")}\n`);
+  }
   write(`${ui.orange("Recovery questions:")} answers are hidden and required.\n`);
   return {
     username,
     password,
+    motherAddress,
     securityAnswers: {
       answer1: await requiredAnswer("Favorite color (hidden): "),
       answer2: await requiredAnswer("First pet's name (hidden): "),
@@ -357,7 +365,7 @@ async function execute(command, argv, context, preParsed = null) {
     case "register": {
       const api = requireApi(context, { authenticated: false });
       const details = await context.registrationDetails(positionals[0], api);
-      const response = await api.register(details.username.toLowerCase().trim(), details.password, details.securityAnswers);
+      const response = await api.register(details.username.toLowerCase().trim(), details.password, details.securityAnswers, details.motherAddress);
       const token = response?.data?.token;
       const user = response?.data?.user;
       if (!token || !user) throw new Error("The server returned an invalid registration response");
@@ -725,6 +733,7 @@ async function interactiveShell(context) {
       suggested,
       api,
       askUsername: () => ensureReadline().question("Choose username: "),
+      askMotherAddress: () => ensureReadline().question("Mother should call me her: "),
       secret,
       write: (message) => context.output.write(message),
       beforeNetwork: suspendReadline,
@@ -784,6 +793,12 @@ async function interactiveShell(context) {
       if (["/exit", "/back", "exit mother", "goodbye mother"].includes(normalized)) {
         context.output.write(`${ui.orange("Mother>")} I'll be here whenever you need me.\n`);
         break;
+      }
+      if (["clear", "/clear", "clear chat", "clear chats"].includes(normalized)) {
+        history = [];
+        context.output.write("\u001bc");
+        context.output.write(`${ui.orange("Mother>")} Fresh page, my dear. I'm still here.\n`);
+        continue;
       }
       if (!message.trim()) continue;
       await suspendReadline();
@@ -900,6 +915,7 @@ export async function run(argv, streams = {}) {
         suggested,
         api,
         askUsername: () => ask("Choose username: ", { input, output }),
+        askMotherAddress: () => ask("Mother should call me her (son/daughter/child): ", { input, output }),
         secret: (question) => readSecret(question, { input, output }),
         write: (message) => output.write(message),
       }),
@@ -974,6 +990,7 @@ export async function run(argv, streams = {}) {
         suggested,
         api,
         askUsername: () => ask("Choose username: ", { input, output }),
+        askMotherAddress: () => ask("Mother should call me her (son/daughter/child): ", { input, output }),
         secret: (question) => readSecret(question, { input, output }),
         write: (message) => output.write(message),
       }),

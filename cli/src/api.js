@@ -154,10 +154,10 @@ export class MiDOnlineApi {
     return this.request("/auth/login", { method: "POST", body: { username, password } });
   }
 
-  register(username, password, securityAnswers) {
+  register(username, password, securityAnswers, motherAddress = "child") {
     return this.request("/auth/register", {
       method: "POST",
-      body: { username, password, securityAnswers },
+      body: { username, password, securityAnswers, mother_address: motherAddress },
     });
   }
 

@@ -93,9 +93,11 @@ Mother> I've saved that memory for you.
 
 Mother uses Groq through the authenticated MiD backend. The `GROQ_API_KEY`
 must exist only in the backend environment; it is never accepted or stored by
-the CLI. Mother can search the signed-in user's memories, save text memories
+the CLI. Mother can answer general questions, search the live web with cited
+sources, search the signed-in user's memories, save text memories
 after a clear request, and count the library. Memory content is treated as
-untrusted data, and Mother cannot access other users or delete memories. Use
+untrusted data, and Mother cannot access other users or delete memories. A user
+can explicitly say not to search their memories for any particular request. Use
 `/exit` or `goodbye mother` to return to MiD commands.
 
 If this computer contains memories created by MiD CLI 1, upload each unsynced entry once with:

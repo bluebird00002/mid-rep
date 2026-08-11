@@ -146,9 +146,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, password, securityAnswers) => {
+  const register = async (username, password, securityAnswers, motherAddress = "child") => {
     try {
-      const response = await api.register(username, password, securityAnswers);
+      const response = await api.register(username, password, securityAnswers, motherAddress);
       if (response.success && response.data) {
         const { token, user } = response.data;
         if (token && user) {

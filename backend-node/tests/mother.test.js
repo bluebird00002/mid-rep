@@ -1,4 +1,4 @@
-import { runMother } from "../services/mother.js";
+import { formatMotherReply, runMother } from "../services/mother.js";
 import { jest } from "@jest/globals";
 
 const response = (body, status = 200) => ({
@@ -8,18 +8,31 @@ const response = (body, status = 200) => ({
 });
 
 describe("Mother Groq orchestration", () => {
+  test("formats dash-heavy model output for the CLI", () => {
+    expect(formatMotherReply("It’s *Mother*—happy to help.\n- First idea\n- Second idea"))
+      .toBe("It’s Mother, happy to help.\n• First idea\n• Second idea");
+    expect(formatMotherReply("A well-known memory ID: abc-123")).toBe("A well-known memory ID: abc-123");
+    expect(formatMotherReply("* Care first\n2 * 3 = 6")).toBe("• Care first\n2 × 3 = 6");
+  });
+
   test("returns a normal companion response without a tool call", async () => {
+    const fetchImpl = jest.fn(async () => response({
+      choices: [{ message: { role: "assistant", content: "Hello, I'm here." } }],
+    }));
     const result = await runMother({
       apiKey: "test-key",
       systemPrompt: "You are Mother",
       messages: [{ role: "user", content: "Hello" }],
       executeTool: jest.fn(),
-      fetchImpl: jest.fn(async () => response({
-        choices: [{ message: { role: "assistant", content: "Hello, I'm here." } }],
-      })),
+      fetchImpl,
     });
     expect(result.message).toBe("Hello, I'm here.");
     expect(result.actions).toEqual([]);
+    const request = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(request.tools).toEqual(expect.arrayContaining([
+      { type: "browser_search" },
+      expect.objectContaining({ type: "function", function: expect.objectContaining({ name: "search_memories" }) }),
+    ]));
   });
 
   test("executes a requested memory tool and returns its result to Groq", async () => {

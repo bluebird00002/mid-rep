@@ -22,7 +22,7 @@ router.post(
   sanitize(),
   async (req, res) => {
     try {
-      const { username, password, securityAnswers, profile_image_url } =
+      const { username, password, securityAnswers, profile_image_url, mother_address } =
         req.body;
 
       if (!username || !password) {
@@ -41,6 +41,14 @@ router.post(
         return res.status(400).json({
           success: false,
           error: "All security answers are required",
+        });
+      }
+
+      const motherAddress = String(mother_address || "child").trim().toLowerCase();
+      if (!["son", "daughter", "child"].includes(motherAddress)) {
+        return res.status(400).json({
+          success: false,
+          error: "Mother preference must be son, daughter, or child",
         });
       }
 
@@ -155,6 +163,7 @@ router.post(
             role: process.env.MID_BOOTSTRAP_ADMIN_USERNAME?.toLowerCase() === lowerUsername ? "superadmin" : "user",
             status: "active",
             profile_image_url: profile_image_url || null,
+            mother_address: motherAddress,
             created_at: admin.firestore.FieldValue.serverTimestamp(),
           });
 
@@ -202,6 +211,7 @@ router.post(
             id: userId,
             username: lowerUsername,
             profile_image_url: profile_image_url || null,
+            mother_address: motherAddress,
           },
         },
         message: "Account created successfully",
@@ -341,6 +351,7 @@ router.post("/login", rateLimit(10, 15 * 60 * 1000, "login"), sanitize(), async 
             id: user.id,
             username: user.username,
             profile_image_url: user.profile_image_url || null,
+            mother_address: user.mother_address || null,
           },
           isFirstLogin: isFirstLogin,
         },
@@ -357,6 +368,7 @@ router.post("/login", rateLimit(10, 15 * 60 * 1000, "login"), sanitize(), async 
             id: user.id,
             username: user.username,
             profile_image_url: user.profile_image_url || null,
+            mother_address: user.mother_address || null,
           },
           isFirstLogin: false, // Default to false if tracking fails
         },
@@ -1032,6 +1044,7 @@ router.get("/profile", async (req, res) => {
         id: userId,
         username: userData.username,
         profile_image_url: userData.profile_image_url || null,
+        mother_address: userData.mother_address || null,
       },
     });
   } catch (error) {

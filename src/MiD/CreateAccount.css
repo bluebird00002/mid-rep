@@ -247,7 +247,8 @@
   flex-shrink: 0;
 }
 
-.form-grp input {
+.form-grp input,
+.form-grp select {
   flex: 1;
   background: transparent;
   border: none;
@@ -257,6 +258,15 @@
   font-family: inherit;
   padding: 4px 0;
   min-width: 200px;
+}
+
+.form-grp select {
+  cursor: pointer;
+}
+
+.form-grp select option {
+  background: #17120c;
+  color: #fff;
 }
 
 .form-grp input::placeholder {

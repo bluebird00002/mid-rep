@@ -121,8 +121,8 @@ class MiDApi {
       body: JSON.stringify({ username, password }),
     });
   }
-  async register(username, password, securityAnswers, profileImageUrl = null) {
-    const body = { username, password };
+  async register(username, password, securityAnswers, motherAddress = "child", profileImageUrl = null) {
+    const body = { username, password, mother_address: motherAddress };
     if (profileImageUrl) body.profile_image_url = profileImageUrl;
     if (securityAnswers)
       body.securityAnswers = {

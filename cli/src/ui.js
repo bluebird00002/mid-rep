@@ -136,9 +136,13 @@ Account and system:
 Mother AI:
   hello mother                    Start a private Mother conversation
   /exit                            Return from Mother to normal MiD commands
+  clear | /clear                   Clear the screen and current Mother chat
   goodbye mother                  End the current Mother conversation
-  Mother can chat, search your memories, save a memory when clearly asked,
-  and summarize your library. She cannot access another user's library.
+  Say "call me your son/daughter/child" to change Mother's form of address.
+  Mother can chat, answer general questions, search the live web, search your
+  memories, save a memory when clearly asked, and summarize your library.
+  She cannot access another user's library. Say "don't check my memories"
+  whenever you want an answer based only on general knowledge or the web.
 
 Options (add these after a command):
   --category <name>                Organize or filter memories by a section

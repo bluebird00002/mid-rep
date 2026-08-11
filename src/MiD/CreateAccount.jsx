@@ -55,6 +55,7 @@ function CreateAccount() {
   const [answer1, setAnswer1] = useState("");
   const [answer2, setAnswer2] = useState("");
   const [answer3, setAnswer3] = useState("");
+  const [motherAddress, setMotherAddress] = useState("child");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -270,7 +271,7 @@ function CreateAccount() {
           answer2,
           answer3,
         },
-        null,
+        motherAddress,
       );
       setLoading(false);
 
@@ -593,6 +594,28 @@ function CreateAccount() {
                         {errors.confirmPassword}
                       </div>
                     )}
+                  </div>
+
+                  {/* Security Questions */}
+                  <div>
+                    <label className="security-question-label" htmlFor="motherAddress">
+                      How should Mother address you?
+                    </label>
+                    <div className="form-grp">
+                      <User size={20} />
+                      <select
+                        id="motherAddress"
+                        name="motherAddress"
+                        value={motherAddress}
+                        onChange={(event) => setMotherAddress(event.target.value)}
+                        disabled={loading}
+                      >
+                        <option value="son">Her son</option>
+                        <option value="daughter">Her daughter</option>
+                        <option value="child">Her child</option>
+                      </select>
+                    </div>
+                    <small className="field-hint">This only controls Mother’s form of address.</small>
                   </div>
 
                   {/* Security Questions */}
