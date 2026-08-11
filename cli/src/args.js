@@ -2,14 +2,18 @@ export function tokenize(line) {
   const tokens = [];
   let token = "";
   let quote = null;
-  let escaped = false;
+  const source = line.trim();
 
-  for (const character of line.trim()) {
-    if (escaped) {
-      token += character;
-      escaped = false;
-    } else if (character === "\\") {
-      escaped = true;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === "\\") {
+      const next = source[index + 1];
+      // Preserve Windows path separators. Backslash is an escape only for a
+      // quote inside matching quotes, or for whitespace/quotes outside them.
+      if ((quote && next === quote) || (!quote && next && /[\s"']/.test(next))) {
+        token += next;
+        index += 1;
+      } else token += character;
     } else if (quote) {
       if (character === quote) quote = null;
       else token += character;
@@ -25,7 +29,6 @@ export function tokenize(line) {
     }
   }
 
-  if (escaped) token += "\\";
   if (quote) throw new Error("Unclosed quote");
   if (token) tokens.push(token);
   return tokens;
