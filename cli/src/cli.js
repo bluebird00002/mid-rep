@@ -46,9 +46,13 @@ function installWezTerm() {
       windowsHide: false,
     });
     child.once("error", reject);
-    child.once("exit", (code) => code === 0
-      ? resolve()
-      : reject(new Error(`WezTerm installer exited with code ${code}`)));
+    child.once("exit", (code) => {
+      if (code === 0) return resolve();
+      const error = new Error(`WezTerm installer exited with code 0x${Number(code).toString(16).toUpperCase()}`);
+      error.code = "MID_WEZTERM_INSTALL_FAILED";
+      error.exitCode = code;
+      reject(error);
+    });
   });
 }
 
@@ -122,7 +126,17 @@ async function redirectToWezTerm(argv, { input, output }) {
     output.write(`${ui.yellow("MiD was not started.")} Install WezTerm or run MiD again and approve installation.\n`);
     return;
   }
-  await installWezTerm();
+  await ask("Close every open WezTerm window before installation, then press Enter to continue: ", { input, output });
+  try {
+    await installWezTerm();
+  } catch (error) {
+    if (error.code === "MID_WEZTERM_INSTALL_FAILED") {
+      output.write(`${ui.red("WezTerm could not be installed because one of its files may still be in use.")}\n`);
+      output.write("Close every WezTerm window completely, then run mid again from CMD or PowerShell.\n");
+      return;
+    }
+    throw error;
+  }
   await launchMiDInWezTerm(argv);
   output.write(`${ui.green("WezTerm installed. Opening MiD now...")} You may close this window.\n`);
 }
