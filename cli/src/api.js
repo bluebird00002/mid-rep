@@ -98,7 +98,7 @@ export class MiDOnlineApi {
             body,
             signal: this.requestSignal(),
           });
-          if (attempt === 0 && TRANSIENT_STATUS.has(response.status)) {
+          if (safeToRetry && attempt === 0 && TRANSIENT_STATUS.has(response.status)) {
             await response.body?.cancel().catch(() => {});
             await delay(750);
             continue;

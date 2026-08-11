@@ -65,6 +65,24 @@ test("safe reads retry once after a transient server failure", async (t) => {
   assert.equal(requests, 2);
 });
 
+test("writes read a transient error body once without retrying", async (t) => {
+  let requests = 0;
+  const server = createServer((_request, response) => {
+    requests += 1;
+    response.statusCode = 503;
+    response.setHeader("content-type", "application/json");
+    response.end(JSON.stringify({ error: "Mother is temporarily unavailable" }));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const api = new MiDOnlineApi(`http://127.0.0.1:${server.address().port}/api`);
+  await assert.rejects(
+    api.motherChat("What time is it?", [], "conversation_123"),
+    /Mother is temporarily unavailable/,
+  );
+  assert.equal(requests, 1);
+});
+
 test("long requests report progress and can be cancelled", async (t) => {
   const server = createServer(() => {});
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

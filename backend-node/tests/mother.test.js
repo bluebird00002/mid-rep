@@ -34,6 +34,11 @@ describe("Mother Groq orchestration", () => {
       expect.objectContaining({ type: "function", function: expect.objectContaining({ name: "search_memories" }) }),
     ]));
     expect(request).not.toHaveProperty("citation_options");
+    const clockTool = request.tools.find((tool) => tool.function?.name === "get_current_time");
+    expect(clockTool.function.parameters.properties.timezone.anyOf).toEqual([
+      { type: "string" },
+      { type: "null" },
+    ]);
   });
 
   test("executes a requested memory tool and returns its result to Groq", async () => {

@@ -79,7 +79,10 @@ export const MOTHER_TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          timezone: { type: "string", description: "Optional IANA timezone such as Africa/Nairobi, Europe/London, or America/New_York." },
+          timezone: {
+            anyOf: [{ type: "string" }, { type: "null" }],
+            description: "Optional IANA timezone such as Africa/Nairobi, Europe/London, or America/New_York. Use null to use the saved timezone.",
+          },
         },
       },
     },
