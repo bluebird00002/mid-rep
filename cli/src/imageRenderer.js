@@ -24,11 +24,15 @@ function luminance([r, g, b]) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-export async function renderImage(buffer, { width = 48, color = true } = {}) {
+export async function renderImage(buffer, { width = 40, color = true, maxRows = 24, crop = false } = {}) {
   const safeWidth = Math.max(12, Math.min(100, Number(width) || 48));
+  const safeRows = Math.max(6, Math.min(50, Number(maxRows) || 24));
+  const resize = crop
+    ? { width: safeWidth, height: safeRows * 2, fit: "cover", position: "attention" }
+    : { width: safeWidth, height: safeRows * 2, fit: "inside", withoutEnlargement: true };
   const { data, info } = await sharp(buffer, { animated: false, limitInputPixels: 40_000_000 })
     .autoOrient()
-    .resize({ width: safeWidth, withoutEnlargement: true })
+    .resize(resize)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });

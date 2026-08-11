@@ -189,7 +189,7 @@ function printImages(images, output, width) {
 
 async function printRenderedImages(images, api, context, width, options = {}) {
   if (images.length === 0) return;
-  const renderWidth = parseWidth(options.width, Math.min(64, (context.output.columns || 72) - 8));
+  const renderWidth = parseWidth(options.width, Math.min(36, (context.output.columns || 72) - 8));
   const color = !options.mono && supportsTrueColor(context.output);
   for (const image of images) {
     context.output.write(`${formatImageCard(image, { width: Math.max(40, width) })}\n`);
@@ -199,7 +199,13 @@ async function printRenderedImages(images, api, context, width, options = {}) {
     }
     try {
       const downloaded = await api.downloadImage(image.image_url);
-      context.output.write(`${await renderImage(downloaded.buffer, { width: renderWidth, color })}\n`);
+      context.output.write(`${await renderImage(downloaded.buffer, {
+        width: renderWidth,
+        color,
+        maxRows: 18,
+        crop: true,
+      })}\n`);
+      context.output.write(`${ui.dim(`Full resolution: image open ${image.id.slice(0, 8)}`)}\n`);
     } catch (error) {
       if (error.code === "MID_CANCELLED") throw error;
       context.output.write(`${ui.yellow(`Preview unavailable: ${error.message}`)}\n`);
@@ -306,7 +312,7 @@ function usesOnline(context) {
 async function executeImage(args, options, context) {
   const [action, ...positionals] = args;
   const api = requireApi(context);
-  const width = parseWidth(options.width, Math.min(64, (context.output.columns || 72) - 8));
+  const width = parseWidth(options.width, Math.min(40, (context.output.columns || 72) - 8));
 
   if (action === "add") {
     const filePath = positionals.join(" ");
@@ -335,7 +341,7 @@ async function executeImage(args, options, context) {
     const downloaded = await api.downloadImage(selected.image_url);
     context.output.write(`${formatImageCard(selected, { width: Math.max(40, width) })}\n`);
     const color = !options.mono && supportsTrueColor(context.output);
-    context.output.write(`${await renderImage(downloaded.buffer, { width, color })}\n`);
+    context.output.write(`${await renderImage(downloaded.buffer, { width, color, maxRows: 24 })}\n`);
     if (options.open || action === "open") {
       await openImage(downloaded.buffer, downloaded.contentType);
       context.output.write(`${ui.dim("Opened the full-resolution image in the system viewer.")}\n`);
