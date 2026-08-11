@@ -143,7 +143,6 @@ export async function runMother({
       tools: MOTHER_TOOLS,
       tool_choice: "auto",
       parallel_tool_calls: false,
-      citation_options: "enabled",
       max_completion_tokens: 700,
     }, { apiKey, fetchImpl });
     const assistant = response?.choices?.[0]?.message;

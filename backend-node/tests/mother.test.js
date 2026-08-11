@@ -33,6 +33,7 @@ describe("Mother Groq orchestration", () => {
       { type: "browser_search" },
       expect.objectContaining({ type: "function", function: expect.objectContaining({ name: "search_memories" }) }),
     ]));
+    expect(request).not.toHaveProperty("citation_options");
   });
 
   test("executes a requested memory tool and returns its result to Groq", async () => {
