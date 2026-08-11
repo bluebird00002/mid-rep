@@ -126,7 +126,6 @@ async function redirectToWezTerm(argv, { input, output }) {
     output.write(`${ui.yellow("MiD was not started.")} Install WezTerm or run MiD again and approve installation.\n`);
     return;
   }
-  await ask("Close every open WezTerm window before installation, then press Enter to continue: ", { input, output });
   try {
     await installWezTerm();
   } catch (error) {
