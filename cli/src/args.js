@@ -38,6 +38,7 @@ export function parseArguments(argv) {
   const positionals = [];
   const options = {};
   const booleanOptions = new Set(["help", "version", "yes", "local", "mono", "open"]);
+  const multiWordOptions = new Set(["description"]);
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (!value.startsWith("--")) {
@@ -47,6 +48,16 @@ export function parseArguments(argv) {
     const name = value.slice(2);
     if (booleanOptions.has(name)) {
       options[name] = true;
+      continue;
+    }
+    if (multiWordOptions.has(name)) {
+      const words = [];
+      while (argv[index + 1] && !argv[index + 1].startsWith("--")) {
+        words.push(argv[index + 1]);
+        index += 1;
+      }
+      if (words.length === 0) throw new Error(`Option --${name} requires a value`);
+      options[name] = words.join(" ");
       continue;
     }
     const next = argv[index + 1];

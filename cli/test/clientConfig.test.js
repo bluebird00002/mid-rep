@@ -20,7 +20,23 @@ test("device settings never persist passwords or session tokens", async () => {
     assert.deepEqual(await loadClientConfig(filePath, "https://default.example/api"), {
       apiBase: "https://mid.example/api",
       username: "owner",
+      imageSetupSeen: false,
     });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("device settings remember completion of image onboarding", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "mid-config-"));
+  const filePath = path.join(directory, "config.json");
+  try {
+    await saveClientConfig(filePath, {
+      apiBase: "https://mid.example/api",
+      username: null,
+      imageSetupSeen: true,
+    });
+    assert.equal((await loadClientConfig(filePath, "https://default.example/api")).imageSetupSeen, true);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

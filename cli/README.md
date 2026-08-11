@@ -143,6 +143,35 @@ stats
 
 IDs may be shortened to any unique prefix.
 
+## Image viewing
+
+MiD automatically uses native inline graphics in WezTerm, Kitty, Ghostty,
+iTerm2, and compatible VS Code terminals. These display the original pixels at
+a compact terminal size. CMD and Windows Terminal do not expose a compatible
+inline image protocol, so MiD shows a portable character preview there. Run
+`image open <id>` for a clear full-resolution view in the system image viewer.
+
+For sharp inline images on Windows, install WezTerm and launch MiD inside it:
+
+```powershell
+winget install wez.wezterm
+```
+
+On its first interactive launch, MiD detects whether the current terminal can
+show sharp inline images. On Windows it offers to install WezTerm through
+Windows Package Manager after the user confirms. Run `image setup` to repeat
+this guided setup later. MiD never installs system software silently.
+
+On Windows, starting the interactive application from CMD, PowerShell, or
+Windows Terminal now opens the same MiD command automatically in WezTerm. If
+WezTerm is missing, MiD asks for permission to install it first; declining
+leaves MiD closed. Informational commands such as `mid --help`, `mid --version`,
+and `mid about` remain available in any terminal.
+
+If Windows cannot replace an embedded OpenConsole file because an old process
+is still using it, MiD shows a clear recovery instruction instead of exposing
+the installer's numeric exit code.
+
 Use `--local` with a one-shot command to access memories created by MiD CLI 1 before connecting the online service.
 
 ## Images

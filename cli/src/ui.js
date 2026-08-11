@@ -53,14 +53,14 @@ export function panel(title, lines, { width = 72, accent = ui.orange } = {}) {
 }
 
 export function banner() {
-  if (asciiOnly) return ui.orange("[ MiD ]") + ui.dim("  secure memory terminal");
+  if (asciiOnly) return `${ui.orange("[ MiD ]")}\n${ui.dim("My Individual Diary")}`;
   return [
     ui.orange("███╗   ███╗██╗██████╗ "),
     ui.orange("████╗ ████║██║██╔══██╗"),
     ui.orange("██╔████╔██║██║██║  ██║"),
     ui.orange("██║╚██╔╝██║██║██║  ██║"),
     ui.orange("██║ ╚═╝ ██║██║██████╔╝"),
-    ui.dim("personal memory terminal  •  account sign-in  •  online library"),
+    ui.dim("My Individual Diary"),
   ].join("\n");
 }
 
@@ -121,8 +121,13 @@ Images:
   image add <path>                 Upload a picture to your library
   image list                       List your uploaded pictures
   image show <id>                  Display a picture inside the terminal
+  image open <id>                  Open the clear original in the system viewer
+  image setup                      Set up sharp inline image support
   image show <id> --open           Open it in the computer's image viewer too
   image delete <id>                Delete after confirmation
+  Sharp inline photos require WezTerm, Kitty, Ghostty, iTerm2, or a compatible
+  terminal. CMD and Windows Terminal use a character preview plus image open.
+  Windows install: winget install wez.wezterm
 
 Account and system:
   passwd                           Change your MiD account password

@@ -35,6 +35,21 @@ test("parses flags and positional values", () => {
   );
 });
 
+test("parses an unquoted multi-word image description without changing the path", () => {
+  assert.deepEqual(
+    parseArguments([
+      "add",
+      String.raw`D:\me\images\mom.png`,
+      "--tags", "mom,family",
+      "--description", "my", "beloved", "mom",
+    ]),
+    {
+      positionals: ["add", String.raw`D:\me\images\mom.png`],
+      options: { tags: "mom,family", description: "my beloved mom" },
+    },
+  );
+});
+
 test("rejects unclosed quotes", () => {
   assert.throws(() => tokenize('add "unfinished'), /Unclosed quote/);
 });

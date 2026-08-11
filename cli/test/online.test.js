@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import { MiDOnlineApi, normalizeApiBase, unwrapMemories } from "../src/api.js";
-import { DEFAULT_API_BASE, interpretShow, promptLabel, syncLocalEntries } from "../src/cli.js";
+import { DEFAULT_API_BASE, interpretShow, promptLabel, shouldRedirectToWezTerm, syncLocalEntries } from "../src/cli.js";
 
 test("the distributed CLI uses the shared production API by default", () => {
   assert.equal(DEFAULT_API_BASE, "https://mid-rep.onrender.com/api");
@@ -12,6 +12,13 @@ test("the distributed CLI uses the shared production API by default", () => {
 test("the prompt uses the signed-in username", () => {
   assert.equal(promptLabel({ username: "elibariki", token: "session" }), "elibariki");
   assert.equal(promptLabel({ username: "elibariki", token: null }), "mid");
+});
+
+test("interactive Windows sessions redirect to WezTerm without redirect loops", () => {
+  assert.equal(shouldRedirectToWezTerm({}, { platform: "win32", isTTY: true }), true);
+  assert.equal(shouldRedirectToWezTerm({ WEZTERM_PANE: "1" }, { platform: "win32", isTTY: true }), false);
+  assert.equal(shouldRedirectToWezTerm({}, { platform: "linux", isTTY: true }), false);
+  assert.equal(shouldRedirectToWezTerm({}, { platform: "win32", isTTY: false }), false);
 });
 
 test("show accepts plural tags and hashtag shortcuts", () => {

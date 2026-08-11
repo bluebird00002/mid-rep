@@ -12,10 +12,11 @@ export async function loadClientConfig(filePath, defaultApiBase) {
     return {
       apiBase: parsed.apiBase || defaultApiBase,
       username: typeof parsed.username === "string" ? parsed.username : null,
+      imageSetupSeen: parsed.imageSetupSeen === true,
     };
   } catch (error) {
     if (error.code !== "ENOENT") throw new Error(`MiD settings are invalid: ${error.message}`);
-    return { apiBase: defaultApiBase, username: null };
+    return { apiBase: defaultApiBase, username: null, imageSetupSeen: false };
   }
 }
 
@@ -29,6 +30,7 @@ export async function saveClientConfig(filePath, config) {
     await handle.writeFile(`${JSON.stringify({
       apiBase: config.apiBase,
       username: config.username || null,
+      imageSetupSeen: config.imageSetupSeen === true,
     }, null, 2)}\n`, "utf8");
     await handle.close();
     handle = null;
