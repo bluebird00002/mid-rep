@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import sharp from "sharp";
-import { renderImage, renderNativeImage, terminalGraphicsProtocol } from "../src/imageRenderer.js";
+import { displayNativeImage, renderImage, renderNativeImage, terminalGraphicsProtocol } from "../src/imageRenderer.js";
 
 const sample = Buffer.from(`
   <svg width="4" height="4" xmlns="http://www.w3.org/2000/svg">
@@ -33,10 +33,22 @@ test("portrait previews respect the terminal row cap", async () => {
 });
 
 test("detects native terminal graphics without misidentifying Windows Terminal", () => {
-  assert.equal(terminalGraphicsProtocol({ WEZTERM_PANE: "1" }, { isTTY: true }), "kitty");
+  assert.equal(terminalGraphicsProtocol({ WEZTERM_PANE: "1" }, { isTTY: true }), "wezterm");
   assert.equal(terminalGraphicsProtocol({ TERM_PROGRAM: "iTerm.app" }, { isTTY: true }), "iterm");
   assert.equal(terminalGraphicsProtocol({ WT_SESSION: "session" }, { isTTY: true }), null);
   assert.equal(terminalGraphicsProtocol({ WEZTERM_PANE: "1" }, { isTTY: false }), null);
+});
+
+test("writes native protocol output through the provided terminal stream", async () => {
+  let output = "";
+  const displayed = await displayNativeImage(sample, {
+    protocol: "kitty",
+    width: 12,
+    maxRows: 6,
+    output: { write: (value) => { output += value; } },
+  });
+  assert.equal(displayed, true);
+  assert.match(output, /\u001b_Ga=T,f=100/);
 });
 
 test("encodes native Kitty and iTerm image payloads", async () => {

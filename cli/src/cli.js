@@ -9,7 +9,7 @@ import { parseArguments, tokenize } from "./args.js";
 import { MiDOnlineApi, normalizeApiBase, unwrapImages, unwrapMemories } from "./api.js";
 import { PASSWORD_RULES, USERNAME_RULES, validateAccountPassword, validateAccountUsername } from "./accountValidation.js";
 import { defaultConfigPath, loadClientConfig, saveClientConfig } from "./clientConfig.js";
-import { cleanupViewerCache, openImage, renderImage, renderNativeImage, terminalGraphicsProtocol } from "./imageRenderer.js";
+import { cleanupViewerCache, displayNativeImage, openImage, renderImage, terminalGraphicsProtocol } from "./imageRenderer.js";
 import { ask, askYesNo, readSecret, requestNewPassword } from "./prompt.js";
 import { aboutText, banner, formatEntry, formatImageCard, helpText, panel, ui } from "./ui.js";
 import {
@@ -50,6 +50,81 @@ function installWezTerm() {
       ? resolve()
       : reject(new Error(`WezTerm installer exited with code ${code}`)));
   });
+}
+
+export function shouldRedirectToWezTerm(environment = process.env, {
+  platform = process.platform,
+  isTTY = process.stdin.isTTY && process.stdout.isTTY,
+} = {}) {
+  if (environment.MID_NO_TERMINAL_REDIRECT === "1") return false;
+  return platform === "win32"
+    && Boolean(isTTY)
+    && terminalGraphicsProtocol(environment, { isTTY: true }) !== "wezterm";
+}
+
+function spawnDetached(executable, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(executable, args, {
+      detached: true,
+      shell: false,
+      stdio: "ignore",
+      windowsHide: false,
+    });
+    child.once("spawn", () => {
+      child.unref();
+      resolve();
+    });
+    child.once("error", reject);
+  });
+}
+
+async function launchMiDInWezTerm(argv) {
+  const args = [
+    "start",
+    "--cwd", process.cwd(),
+    "--",
+    process.execPath,
+    process.argv[1],
+    ...argv,
+  ];
+  const candidates = [
+    "wezterm.exe",
+    process.env.ProgramFiles && path.join(process.env.ProgramFiles, "WezTerm", "wezterm.exe"),
+  ].filter(Boolean);
+  let lastError;
+  for (const executable of [...new Set(candidates)]) {
+    try {
+      await spawnDetached(executable, args);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+  throw lastError || new Error("WezTerm is not installed");
+}
+
+async function redirectToWezTerm(argv, { input, output }) {
+  output.write(`${panel("MiD NEEDS WEZTERM", [
+    "MiD uses WezTerm on Windows so memories, pictures, and the full interface work consistently.",
+    "This CMD, PowerShell, or Windows Terminal session will not run the interactive MiD application.",
+  ], { width: Math.min(84, output.columns || 72) })}\n`);
+  try {
+    await launchMiDInWezTerm(argv);
+    output.write(`${ui.green("Opening MiD in WezTerm...")} You may close this window.\n`);
+    return;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw new Error(`Unable to open WezTerm: ${error.message}`);
+  }
+
+  const approved = await askYesNo("WezTerm is required but is not installed. Install it now with Windows Package Manager?", { input, output });
+  if (!approved) {
+    output.write(`${ui.yellow("MiD was not started.")} Install WezTerm or run MiD again and approve installation.\n`);
+    return;
+  }
+  await installWezTerm();
+  await launchMiDInWezTerm(argv);
+  output.write(`${ui.green("WezTerm installed. Opening MiD now...")} You may close this window.\n`);
 }
 
 async function configureImageViewing(context, { firstRun = false } = {}) {
@@ -244,7 +319,7 @@ function printImages(images, output, width) {
 
 async function printRenderedImages(images, api, context, width, options = {}) {
   if (images.length === 0) return;
-  const renderWidth = parseWidth(options.width, Math.min(36, (context.output.columns || 72) - 8));
+  const renderWidth = parseWidth(options.width, Math.min(44, (context.output.columns || 72) - 8));
   const color = !options.mono && supportsTrueColor(context.output);
   const nativeProtocol = options.mono ? null : terminalGraphicsProtocol(process.env, { isTTY: context.output.isTTY });
   for (const image of images) {
@@ -255,20 +330,31 @@ async function printRenderedImages(images, api, context, width, options = {}) {
     }
     try {
       const downloaded = await api.downloadImage(image.image_url);
+      let nativeError = null;
+      let displayed = false;
       if (nativeProtocol) {
-        context.output.write(`${await renderNativeImage(downloaded.buffer, {
-          protocol: nativeProtocol,
-          width: renderWidth,
-          maxRows: 18,
-        })}\n`);
-      } else {
+        try {
+          displayed = await displayNativeImage(downloaded.buffer, {
+            protocol: nativeProtocol,
+            width: renderWidth,
+            maxRows: 24,
+            output: context.output,
+          });
+        } catch (error) {
+          nativeError = error;
+        }
+      }
+      if (!displayed) {
         context.output.write(`${await renderImage(downloaded.buffer, {
           width: renderWidth,
           color,
-          maxRows: 18,
+          maxRows: 24,
           crop: true,
         })}\n`);
-        context.output.write(`${ui.dim(`Clear original: image open ${image.id.slice(0, 8)} | Sharp inline images: run MiD in WezTerm.`)}\n`);
+        const guidance = nativeError
+          ? `Native viewer failed; character preview shown (${nativeError.message}). Clear original: image open ${image.id.slice(0, 8)}`
+          : `Clear original: image open ${image.id.slice(0, 8)} | Sharp inline images: run MiD in WezTerm.`;
+        context.output.write(`${ui.dim(guidance)}\n`);
       }
     } catch (error) {
       if (error.code === "MID_CANCELLED") throw error;
@@ -380,7 +466,7 @@ async function executeImage(args, options, context) {
     return;
   }
   const api = requireApi(context);
-  const width = parseWidth(options.width, Math.min(40, (context.output.columns || 72) - 8));
+  const width = parseWidth(options.width, Math.min(48, (context.output.columns || 72) - 8));
 
   if (action === "add") {
     const filePath = positionals.join(" ");
@@ -410,11 +496,26 @@ async function executeImage(args, options, context) {
     context.output.write(`${formatImageCard(selected, { width: Math.max(40, width) })}\n`);
     const color = !options.mono && supportsTrueColor(context.output);
     const nativeProtocol = options.mono ? null : terminalGraphicsProtocol(process.env, { isTTY: context.output.isTTY });
+    let nativeError = null;
+    let displayed = false;
     if (nativeProtocol) {
-      context.output.write(`${await renderNativeImage(downloaded.buffer, { protocol: nativeProtocol, width, maxRows: 24 })}\n`);
-    } else {
-      context.output.write(`${await renderImage(downloaded.buffer, { width, color, maxRows: 24 })}\n`);
-      context.output.write(`${ui.dim("This terminal uses a character preview. Use image open for the clear original, or run MiD in WezTerm for sharp inline images.")}\n`);
+      try {
+        displayed = await displayNativeImage(downloaded.buffer, {
+          protocol: nativeProtocol,
+          width,
+          maxRows: 30,
+          output: context.output,
+        });
+      } catch (error) {
+        nativeError = error;
+      }
+    }
+    if (!displayed) {
+      context.output.write(`${await renderImage(downloaded.buffer, { width, color, maxRows: 30 })}\n`);
+      const guidance = nativeError
+        ? `Native viewer failed; character preview shown (${nativeError.message}). Use image open for the clear original.`
+        : "This terminal uses a character preview. Use image open for the clear original, or run MiD in WezTerm for sharp inline images.";
+      context.output.write(`${ui.dim(guidance)}\n`);
     }
     if (options.open || action === "open") {
       await openImage(downloaded.buffer, downloaded.contentType);
@@ -969,6 +1070,15 @@ export async function run(argv, streams = {}) {
   const [rawCommand, ...commandArgs] = parsed.positionals;
   const command = rawCommand?.toLowerCase();
   const filePath = path.resolve(parsed.options.vault || defaultVaultPath());
+
+  const informational = parsed.options.help || parsed.options.version || ["help", "about"].includes(command);
+  if (!informational && shouldRedirectToWezTerm(process.env, {
+    platform: process.platform,
+    isTTY: input.isTTY && output.isTTY,
+  })) {
+    await redirectToWezTerm(argv, { input, output });
+    return;
+  }
 
   await cleanupViewerCache().catch(() => {});
 

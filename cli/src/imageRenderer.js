@@ -12,16 +12,61 @@ export function terminalGraphicsProtocol(environment = process.env, { isTTY = pr
   if (!isTTY || environment.TERM === "dumb") return null;
   const term = String(environment.TERM || "").toLowerCase();
   const program = String(environment.TERM_PROGRAM || "").toLowerCase();
+  if (environment.WEZTERM_PANE || program === "wezterm") return "wezterm";
   if (
-    environment.WEZTERM_PANE
-    || environment.KITTY_WINDOW_ID
+    environment.KITTY_WINDOW_ID
     || environment.GHOSTTY_RESOURCES_DIR
     || term.includes("kitty")
-    || program === "wezterm"
     || program === "ghostty"
   ) return "kitty";
   if (program === "iterm.app" || program === "vscode" || program === "warpterminal") return "iterm";
   return null;
+}
+
+export async function displayNativeImage(buffer, {
+  protocol,
+  width = 40,
+  maxRows = 24,
+  output = process.stdout,
+} = {}) {
+  if (protocol !== "wezterm") {
+    const rendered = await renderNativeImage(buffer, { protocol, width, maxRows });
+    if (!rendered) return false;
+    output.write(`${rendered}\n`);
+    return true;
+  }
+
+  const { columns, rows } = await nativeDimensions(buffer, width, maxRows);
+  return new Promise((resolve, reject) => {
+    const executable = process.platform === "win32" ? "wezterm.exe" : "wezterm";
+    const child = spawn(executable, [
+      "imgcat",
+      "--width", String(columns),
+      "--height", String(rows),
+      "--resample-format", "png",
+    ], {
+      shell: false,
+      // imgcat must inherit the real terminal descriptor. A pipe reports a
+      // zero-sized terminal through Windows ConPTY and older WezTerm releases
+      // can panic while calculating the image geometry.
+      stdio: ["pipe", Number.isInteger(output.fd) ? output.fd : "inherit", "pipe"],
+      windowsHide: true,
+    });
+    let diagnostic = "";
+    child.stderr.on("data", (chunk) => {
+      if (diagnostic.length < 500) diagnostic += chunk.toString();
+    });
+    child.once("error", reject);
+    child.once("exit", (code) => {
+      if (code === 0) resolve(true);
+      else {
+        const summary = diagnostic.trim().split(/\r?\n/, 1)[0].slice(0, 180);
+        reject(new Error(summary || `wezterm imgcat exited with code ${code}`));
+      }
+    });
+    child.stdin.on("error", reject);
+    child.stdin.end(buffer);
+  });
 }
 
 async function nativeDimensions(buffer, width, maxRows) {
