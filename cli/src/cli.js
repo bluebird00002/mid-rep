@@ -885,7 +885,7 @@ async function interactiveShell(context) {
   const warmApi = new MiDOnlineApi(context.data.remote.apiBase);
   warmApi.setRuntime({ signal: warmController.signal });
   warmApi.health().catch(() => {});
-  context.output.write(`${banner()}\n\n${ui.dim("Type help for commands; exit signs out and closes MiD.")}\n`);
+  context.output.write(`${banner()}\n\n${ui.dim("For commands and assistance, type help.")}\n`);
   if (!context.data.remote.token) {
     context.output.write(`\n${panel("WELCOME", [
       context.data.remote.username
