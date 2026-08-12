@@ -187,6 +187,20 @@ export class MiDOnlineApi {
     });
   }
 
+  verifySecurityAnswers(username, securityAnswers) {
+    return this.request("/auth/verify-security-answers", {
+      method: "POST",
+      body: { username, ...securityAnswers },
+    });
+  }
+
+  resetPassword(username, verificationToken, newPassword) {
+    return this.request("/auth/reset-password", {
+      method: "POST",
+      body: { username, verificationToken, newPassword, confirmPassword: newPassword },
+    });
+  }
+
   adminLogin(password) {
     return this.request("/admin/login", { method: "POST", body: { password } });
   }

@@ -62,6 +62,9 @@ Server will run on `http://localhost:3000`
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login
 - `GET /api/auth/verify` - Verify token
+- `POST /api/auth/verify-security-answers` - Verify rate-limited recovery answers and issue a single-use reset token
+- `POST /api/auth/reset-password` - Consume the reset token and replace the account password
+- `POST /api/auth/change-password` - Change the password for a signed-in account
 
 ### Memories (Protected)
 - `GET /api/memories` - Get all memories

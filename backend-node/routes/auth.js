@@ -1,6 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { admin, db } from "../config/firebase.js";
 import sanitize from "../middleware/sanitize.js";
 import { rateLimit } from "../middleware/rateLimit.js";
@@ -8,6 +9,19 @@ import { validatePasswordStrength } from "../utils/passwordValidation.js";
 import authenticateToken from "../middleware/auth.js";
 
 const router = express.Router();
+const INVALID_RECOVERY_MESSAGE = "The username or recovery answers are incorrect";
+const DUMMY_RECOVERY_HASH = bcrypt.hashSync("mid-invalid-recovery-answer", 10);
+
+function digestRecoveryNonce(value) {
+  return createHash("sha256").update(String(value)).digest("hex");
+}
+
+function sameDigest(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  const a = Buffer.from(left, "hex");
+  const b = Buffer.from(right, "hex");
+  return a.length === b.length && a.length > 0 && timingSafeEqual(a, b);
+}
 
 // Debug middleware
 router.use((req, res, next) => {
@@ -793,8 +807,6 @@ router.post(
   try {
     const { username, answer1, answer2, answer3 } = req.body;
 
-    console.log(`Password reset attempt for username: ${username}`);
-
     // Validate input
     if (!username || !answer1 || !answer2 || !answer3) {
       return res.status(400).json({
@@ -814,10 +826,12 @@ router.post(
       .get();
 
     if (usersSnap.empty) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
+      await Promise.all([
+        bcrypt.compare(answer1.toLowerCase().trim(), DUMMY_RECOVERY_HASH),
+        bcrypt.compare(answer2.toLowerCase().trim(), DUMMY_RECOVERY_HASH),
+        bcrypt.compare(answer3.toLowerCase().trim(), DUMMY_RECOVERY_HASH),
+      ]);
+      return res.status(401).json({ success: false, error: INVALID_RECOVERY_MESSAGE });
     }
 
     const userDoc = usersSnap.docs[0];
@@ -831,10 +845,8 @@ router.post(
       .get();
 
     if (secSnap.empty) {
-      return res.status(404).json({
-        success: false,
-        error: "Security answers not found for user",
-      });
+      await bcrypt.compare(answer1.toLowerCase().trim(), DUMMY_RECOVERY_HASH);
+      return res.status(401).json({ success: false, error: INVALID_RECOVERY_MESSAGE });
     }
 
     // Compare answers (case-insensitive, trimmed)
@@ -846,22 +858,24 @@ router.post(
     ]);
 
     if (!answerMatches.every((match) => match === true)) {
-      console.log(`Incorrect answers provided for user ${username}`);
       return res.status(401).json({
         success: false,
-        error: "Incorrect answers provided",
+        error: INVALID_RECOVERY_MESSAGE,
       });
     }
 
-    // Generate temporary verification token (valid for 15 minutes)
-    // Include normalized username so reset checks are consistent
+    // Store only a digest of a random nonce. The signed token is valid for 15
+    // minutes but can be consumed only once.
+    const resetNonce = randomBytes(32).toString("base64url");
+    await userDoc.ref.update({
+      password_reset_nonce_hash: digestRecoveryNonce(resetNonce),
+      password_reset_requested_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
     const verificationToken = jwt.sign(
-      { userId, purpose: "password-reset", username: lowerUsername },
+      { userId, purpose: "password-reset", username: lowerUsername, nonce: resetNonce },
       process.env.JWT_SECRET || "default_secret_key",
       { expiresIn: "15m" },
     );
-
-    console.log(`Security answers verified for user ${username}`);
 
     res.json({
       success: true,
@@ -887,8 +901,6 @@ router.post(
   try {
     const { username, verificationToken, newPassword, confirmPassword } =
       req.body;
-
-    console.log(`Password reset request for username: ${username}`);
 
     // Validate input
     if (!username || !verificationToken || !newPassword || !confirmPassword) {
@@ -951,31 +963,43 @@ router.post(
       .get();
 
     if (usersSnap.empty) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
+      return res.status(401).json({ success: false, error: "Invalid or expired verification token" });
     }
 
     const userDoc = usersSnap.docs[0];
     const userId = userDoc.id;
+    const nonceDigest = digestRecoveryNonce(decoded.nonce || "");
+    if (decoded.userId !== userId || !sameDigest(userDoc.data().password_reset_nonce_hash, nonceDigest)) {
+      return res.status(401).json({ success: false, error: "Invalid or expired verification token" });
+    }
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password in Firestore
-    await db.collection("users").doc(userId).update({
-      password_hash: hashedPassword,
-      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    // Consume the nonce atomically so the verification token cannot be reused.
+    await db.runTransaction(async (transaction) => {
+      const fresh = await transaction.get(userDoc.ref);
+      if (!fresh.exists || !sameDigest(fresh.data().password_reset_nonce_hash, nonceDigest)) {
+        const error = new Error("Recovery token was already used");
+        error.code = "RECOVERY_TOKEN_USED";
+        throw error;
+      }
+      transaction.update(userDoc.ref, {
+        password_hash: hashedPassword,
+        password_reset_nonce_hash: admin.firestore.FieldValue.delete(),
+        password_reset_requested_at: admin.firestore.FieldValue.delete(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
     });
-
-    console.log(`Password reset successful for user ${username}`);
 
     res.json({
       success: true,
       message: "Password reset successfully",
     });
   } catch (error) {
+    if (error.code === "RECOVERY_TOKEN_USED") {
+      return res.status(401).json({ success: false, error: "Invalid or expired verification token" });
+    }
     console.error("Password reset error:", error);
     res.status(500).json({
       success: false,

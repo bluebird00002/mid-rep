@@ -60,6 +60,14 @@ hyphens, with at least one letter. Account passwords are at least 8 characters
 and contain uppercase and lowercase letters, a number, and a symbol, with no
 spaces. MiD displays these rules before asking for either value.
 
+If an account password is forgotten, run `forgot password [username]`, or run
+`passwd` while signed out. MiD privately asks the three recovery questions set
+during registration and validates the replacement password immediately. The
+answers are sent only to the configured HTTPS API and are never saved on the
+device. The server rate-limits attempts, compares bcrypt hashes, returns the
+same failure for an unknown account or incorrect answers, and issues a
+15-minute password-reset token that can be used only once.
+
 A different user registers or logs in with a different username and receives an isolated Firestore library.
 
 Legacy offline vaults still use their original master password and are available

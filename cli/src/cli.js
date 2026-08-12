@@ -247,6 +247,67 @@ async function collectRegistrationDetails({ suggested, askUsername, askMotherAdd
   };
 }
 
+async function collectPasswordRecovery({ suggested, askUsername, secret, write }) {
+  let username = suggested || await askUsername();
+  while (true) {
+    const result = validateAccountUsername(username);
+    if (result.valid) {
+      username = result.username;
+      break;
+    }
+    write(`${ui.red("Invalid username:")} ${result.error}.\n`);
+    username = await askUsername();
+  }
+
+  const requiredAnswer = async (question) => {
+    while (true) {
+      const answer = await secret(question);
+      if (answer.trim()) return answer;
+      write(`${ui.red("A recovery answer is required.")}\n`);
+    }
+  };
+  write(`${ui.orange("Account recovery:")} answer the three questions you set during registration.\n`);
+  const securityAnswers = {
+    answer1: await requiredAnswer("Favorite color (hidden): "),
+    answer2: await requiredAnswer("First pet's name (hidden): "),
+    answer3: await requiredAnswer("City of birth (hidden): "),
+  };
+
+  return { username, securityAnswers };
+}
+
+async function collectReplacementPassword({ secret, write }) {
+  write(`${ui.orange("New password rules:")} ${PASSWORD_RULES}.\n`);
+  let newPassword;
+  while (true) {
+    newPassword = await secret("Choose new account password: ");
+    const result = validateAccountPassword(newPassword);
+    if (!result.valid) {
+      write(`${ui.red("Weak password:")} ${result.error}.\n`);
+      continue;
+    }
+    const confirmation = await secret("Confirm new account password: ");
+    if (newPassword === confirmation) break;
+    write(`${ui.red("Passwords do not match.")} Try again.\n`);
+  }
+  return newPassword;
+}
+
+export async function recoverAccountPassword(context, suggestedUsername) {
+  if (context.globalOptions.local) throw new Error("Online account recovery is unavailable in legacy local mode");
+  const api = requireApi(context, { authenticated: false });
+  const details = await context.passwordRecovery(suggestedUsername);
+  const verification = await api.verifySecurityAnswers(details.username, details.securityAnswers);
+  const verificationToken = verification?.verificationToken || verification?.data?.verificationToken;
+  if (!verificationToken) throw new Error("The server returned an invalid recovery response");
+  context.output.write(`${ui.green("Recovery answers verified.")} You may now choose a new password.\n`);
+  const newPassword = await context.replacementPassword();
+  await api.resetPassword(details.username, verificationToken, newPassword);
+  context.data.remote.username = details.username;
+  await context.persist();
+  context.output.write(`${ui.green("Password renewed successfully.")} Run ${ui.orange(`login ${details.username}`)} with your new password.\n`);
+}
+
 function parseLimit(value) {
   if (value === undefined) return undefined;
   const limit = Number.parseInt(value, 10);
@@ -853,10 +914,19 @@ async function execute(command, argv, context, preParsed = null) {
         context.output.write(`${ui.green("Legacy local vault password changed.")}\n`);
         break;
       }
+      if (!context.data.remote.token) {
+        await recoverAccountPassword(context, positionals[0] || context.data.remote.username);
+        break;
+      }
       const api = requireApi(context);
       const passwords = await context.accountPasswordChange();
       await api.changePassword(passwords.currentPassword, passwords.newPassword);
       context.output.write(`${ui.green("Account password changed successfully.")}\n`);
+      break;
+    }
+    case "forgot": {
+      if (positionals[0]?.toLowerCase() !== "password") throw new Error("Usage: forgot password [username]");
+      await recoverAccountPassword(context, positionals[1] || context.data.remote.username);
       break;
     }
     case "about":
@@ -966,6 +1036,16 @@ async function interactiveShell(context) {
       secret,
       write: (message) => context.output.write(message),
       beforeNetwork: suspendReadline,
+    }),
+    passwordRecovery: (suggested) => collectPasswordRecovery({
+      suggested,
+      askUsername: () => ensureReadline().question("Account username: "),
+      secret,
+      write: (message) => context.output.write(message),
+    }),
+    replacementPassword: () => collectReplacementPassword({
+      secret,
+      write: (message) => context.output.write(message),
     }),
   };
 
@@ -1160,6 +1240,16 @@ export async function run(argv, streams = {}) {
         secret: (question) => readSecret(question, { input, output }),
         write: (message) => output.write(message),
       }),
+      passwordRecovery: (suggested) => collectPasswordRecovery({
+        suggested,
+        askUsername: () => ask("Account username: ", { input, output }),
+        secret: (question) => readSecret(question, { input, output }),
+        write: (message) => output.write(message),
+      }),
+      replacementPassword: () => collectReplacementPassword({
+        secret: (question) => readSecret(question, { input, output }),
+        write: (message) => output.write(message),
+      }),
     };
     if (command === "doctor") {
       output.write(`${panel("DEVICE SECURITY", [
@@ -1236,7 +1326,7 @@ export async function run(argv, streams = {}) {
         write: (message) => output.write(message),
       }),
     };
-    const skipVerification = ["connect", "login", "register", "logout"].includes(command) || parsed.options.local;
+    const skipVerification = ["connect", "login", "register", "logout", "forgot", "passwd"].includes(command) || parsed.options.local;
     if (!skipVerification) await verifySavedSession(context);
     if (!command) await interactiveShell(context);
     else await execute(command, [], context, { positionals: commandArgs, options: parsed.options });

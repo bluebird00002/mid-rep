@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import { MiDOnlineApi, normalizeApiBase, unwrapMemories } from "../src/api.js";
-import { DEFAULT_API_BASE, interpretShow, promptLabel, shouldRedirectToWezTerm, syncLocalEntries } from "../src/cli.js";
+import { DEFAULT_API_BASE, interpretShow, promptLabel, recoverAccountPassword, shouldRedirectToWezTerm, syncLocalEntries } from "../src/cli.js";
 
 test("the distributed CLI uses the shared production API by default", () => {
   assert.equal(DEFAULT_API_BASE, "https://mid-rep.onrender.com/api");
@@ -53,6 +53,66 @@ test("online API sends bearer authentication and unwraps memories", async (t) =>
   const api = new MiDOnlineApi(`http://127.0.0.1:${address.port}/api`, "test-token");
   const result = await api.listMemories({ tags: ["me"] });
   assert.equal(unwrapMemories(result)[0].content, "online");
+});
+
+test("online API sends password recovery answers and the one-time reset token", async (t) => {
+  const requests = [];
+  const server = createServer(async (request, response) => {
+    let body = "";
+    for await (const chunk of request) body += chunk;
+    requests.push({ url: request.url, body: JSON.parse(body) });
+    response.setHeader("content-type", "application/json");
+    response.end(JSON.stringify(request.url.endsWith("verify-security-answers")
+      ? { success: true, verificationToken: "one-time-token" }
+      : { success: true }));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const api = new MiDOnlineApi(`http://127.0.0.1:${server.address().port}/api`);
+  const answers = { answer1: "orange", answer2: "spot", answer3: "nairobi" };
+  const verified = await api.verifySecurityAnswers("owner", answers);
+  await api.resetPassword("owner", verified.verificationToken, "NewPassword1!");
+  assert.deepEqual(requests[0], {
+    url: "/api/auth/verify-security-answers",
+    body: { username: "owner", ...answers },
+  });
+  assert.deepEqual(requests[1], {
+    url: "/api/auth/reset-password",
+    body: {
+      username: "owner",
+      verificationToken: "one-time-token",
+      newPassword: "NewPassword1!",
+      confirmPassword: "NewPassword1!",
+    },
+  });
+});
+
+test("password recovery never asks for a new password when answers are rejected", async () => {
+  let replacementPrompts = 0;
+  const rejected = new Error("The username or recovery answers are incorrect");
+  rejected.status = 401;
+  const api = {
+    token: null,
+    setRuntime() {},
+    verifySecurityAnswers: async () => { throw rejected; },
+  };
+  const context = {
+    globalOptions: {},
+    data: { remote: { apiBase: "https://mid.example/api", username: "owner", token: null } },
+    state: { api, commandSignal: null },
+    passwordRecovery: async () => ({
+      username: "owner",
+      securityAnswers: { answer1: "one", answer2: "two", answer3: "three" },
+    }),
+    replacementPassword: async () => {
+      replacementPrompts += 1;
+      return "NewPassword1!";
+    },
+    persist: async () => {},
+    output: { write() {} },
+  };
+  await assert.rejects(recoverAccountPassword(context), /recovery answers are incorrect/);
+  assert.equal(replacementPrompts, 0);
 });
 
 test("safe reads retry once after a transient server failure", async (t) => {

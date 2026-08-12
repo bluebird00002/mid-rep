@@ -131,6 +131,7 @@ Images:
 
 Account and system:
   passwd                           Change your MiD account password
+  forgot password [username]      Renew a forgotten password using recovery answers
   stats                            Count your memories, images, and tags
   about                            Read a friendly introduction to MiD
   help                             Show this guide
